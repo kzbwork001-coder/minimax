@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from asyncio import Future, get_event_loop
-from typing import Any, override
+from typing import Any
 
 import websockets
 from websockets.asyncio.client import ClientConnection
@@ -21,7 +21,6 @@ class WsTransport(Client):
         super().__init__(phone, token)
         self._ws: ClientConnection | None = None
 
-    @override
     async def _connect(self) -> None:
         for attempt in range(1, CONNECT_MAX_ATTEMPTS + 1):
             try:
@@ -36,12 +35,10 @@ class WsTransport(Client):
                     await asyncio.sleep(CONNECT_RETRY_DELAY)
         raise TimeoutError(f"Failed to connect to {WEBSOCKET_URI} after {CONNECT_MAX_ATTEMPTS} attempts")
 
-    @override
     async def _disconnect(self) -> None:
         if self._ws:
             await self._ws.close()
 
-    @override
     async def _recv_loop(self) -> None:
         """Receive messages from the server and dispatch them to the appropriate future."""
         if not self._ws:
@@ -60,7 +57,6 @@ class WsTransport(Client):
             else:
                 log.warning("seq=%d has no pending future, dropping", wrapper.seq)
 
-    @override
     async def _send(self, opcode: Opcode, **kwargs: Any) -> Future[Wrapper]:
         """Send a request to the server and return a future for the response."""
         self._seq += 1
