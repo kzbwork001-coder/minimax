@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_serializer
 
 from ..constants import CHATS_SYNC, CONTACTS_SYNC, DRAFT_SYNC, PRESENCE_SYNC, SYNC_CHAT_COUNT, SYNC_INTERACTIVE
 from .enums import AuthType
@@ -21,6 +21,10 @@ class PhoneLoginReq(BaseReq):
     phone: int = Field(description="Phone number of the user")
     type: AuthType = Field(default=AuthType.START_AUTH, description="Auth type of the user")
     language: str = Field(default="ru", description="Language of the user")
+
+    @field_serializer("phone")
+    def _phone_to_str(self, v: int) -> str:
+        return str(v)
 
 
 class VerifyCodeReq(BaseReq):
