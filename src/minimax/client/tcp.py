@@ -121,7 +121,7 @@ def _create_ssl_context() -> ssl.SSLContext:
 class TcpTransport(Client):
     """TCP socket transport layer. Handles connection, send/recv over a binary protocol."""
 
-    def __init__(self, phone: str | None, token: str | None = None):
+    def __init__(self, phone: int | None, token: str | None = None):
         super().__init__(phone, token)
         self._host = SOCKET_HOST
         self._port = SOCKET_PORT

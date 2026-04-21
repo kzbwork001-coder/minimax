@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 class WsTransport(Client):
     """WebSocket transport layer. Handles connection, send/recv over JSON-WS."""
 
-    def __init__(self, phone: str | None, token: str | None = None):
+    def __init__(self, phone: int | None, token: str | None = None):
         super().__init__(phone, token)
         self._ws: ClientConnection | None = None
 

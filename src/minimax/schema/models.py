@@ -58,7 +58,6 @@ class Sticker(Attachment):
 
 class Call(Attachment):
     """Sentinel for CALL attachment type (not modelled in minimax)."""
-
     pass
 
 
@@ -142,7 +141,7 @@ class Contact(BaseSchema):
     base_url: str | None = Field(default=None, description="Base image URL")
     names: list[ContactName] = Field(default_factory=list, description="Contact names")
     options: list[str] = Field(default_factory=list, description="Contact options")
-    phone: str | None = Field(default=None, description="Phone number")
+    phone: int | None = Field(default=None, description="Phone number")
     photo_id: int | None = Field(default=None, description="Photo ID")
     registration_time: int | None = Field(default=None, description="Registration timestamp")
     status: str | None = Field(default=None, description="Contact status")

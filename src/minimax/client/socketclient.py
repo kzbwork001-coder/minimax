@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 class SocketClient(TcpTransport):
     device_type = DeviceType.DESKTOP
 
-    def __init__(self, phone: str | None, token: str | None = None):
+    def __init__(self, phone: int | None, token: str | None = None):
         super().__init__(phone, token)
         self._verify_task: asyncio.Task | None = None
 

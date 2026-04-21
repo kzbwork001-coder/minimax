@@ -8,7 +8,6 @@ from datetime import datetime
 from types import TracebackType
 from typing import Any
 
-from .. import Profile, Contact
 from ..constants import PING_INTERVAL_SECONDS
 from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
@@ -25,6 +24,7 @@ from ..schema import (
     Event,
     Message,
     Opcode,
+    Profile,
     UserAgent,
     UserSession,
     Wrapper,
@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 class Client(ABC):
     device_type: DeviceType
 
-    def __init__(self, phone: str | None, token: str | None = None):
+    def __init__(self, phone: int | None, token: str | None = None):
         self.phone = phone
         self.token = token
         self.me: Contact | None = None

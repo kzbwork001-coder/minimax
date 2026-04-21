@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 class WebClient(WsTransport):
     device_type = DeviceType.WEB
 
-    def __init__(self, phone: str | None, token: str | None = None):
+    def __init__(self, phone: int | None, token: str | None = None):
         super().__init__(phone, token)
         self._qr_task: Task | None = None
 

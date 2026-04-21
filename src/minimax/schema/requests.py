@@ -18,7 +18,7 @@ class UserAgentReq(BaseReq):
 class PhoneLoginReq(BaseReq):
     """Payload for the code request."""
 
-    phone: str = Field(description="Phone number of the user")
+    phone: int = Field(description="Phone number of the user")
     type: AuthType = Field(default=AuthType.START_AUTH, description="Auth type of the user")
     language: str = Field(default="ru", description="Language of the user")
 
