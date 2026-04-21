@@ -1,8 +1,8 @@
 """Tests for TCP packet packing/unpacking."""
 
+from minimax.client.tcp import HEADER_SIZE, pack, unpack
 from minimax.schema import Opcode, Wrapper
 from minimax.schema.requests import PingReq
-from minimax.client.tcp import pack, unpack, HEADER_SIZE
 
 
 class TestPack:

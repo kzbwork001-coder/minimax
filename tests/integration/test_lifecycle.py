@@ -3,8 +3,6 @@
 import asyncio
 import uuid
 
-import pytest
-
 from minimax.schema import Opcode
 from minimax.schema.responses import UserAgentRes
 

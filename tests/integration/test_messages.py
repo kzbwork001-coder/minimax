@@ -2,8 +2,6 @@
 
 from datetime import datetime
 
-import pytest
-
 from minimax.schema import Opcode
 from minimax.schema.models import Message
 from minimax.schema.responses import MessagesRes

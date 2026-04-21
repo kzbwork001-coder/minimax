@@ -1,6 +1,5 @@
 """Integration tests for media URL retrieval with mocked responses."""
 
-import pytest
 
 from minimax.schema import Opcode
 from minimax.schema.responses import FileUrlRes, VideoUrlRes

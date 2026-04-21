@@ -8,11 +8,11 @@ from datetime import datetime
 from types import TracebackType
 from typing import Any
 
+from pydantic import TypeAdapter
+
 from ..constants import PING_INTERVAL_SECONDS
 from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
-from pydantic import TypeAdapter
-
 from ..schema import (
     OPCODE_SCHEMA,
     ApiError,
@@ -24,7 +24,6 @@ from ..schema import (
     Event,
     Message,
     Opcode,
-    Profile,
     UserAgent,
     UserSession,
     Wrapper,

@@ -7,7 +7,7 @@ import pytest
 from minimax.schema import ApiError, Event, Opcode
 from minimax.schema.interface import ErrorRes
 from minimax.schema.models import Contact, ContactName, PasswordChallenge, Profile, TokenAttrs
-from minimax.schema.responses import LoginChallengeRes, LoginSuccessRes, SyncRes
+from minimax.schema.responses import LoginChallengeRes, LoginSuccessRes
 
 
 def _make_contact(cid: int, name: str = "User", phone: int = 71234567890) -> Contact:

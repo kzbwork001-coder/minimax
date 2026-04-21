@@ -2,9 +2,9 @@
 
 import json
 
-from minimax.schema.interface import Wrapper, EmptyPayload
 from minimax.schema.enums import Opcode
-from minimax.schema.models import Photo, Call
+from minimax.schema.interface import EmptyPayload, Wrapper
+from minimax.schema.models import Call, Photo
 from minimax.schema.requests import PingReq, SyncReq
 
 

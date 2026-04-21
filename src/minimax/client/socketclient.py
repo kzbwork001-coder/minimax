@@ -5,7 +5,8 @@ from collections.abc import Awaitable, Callable
 from ..schema import (
     ApiError,
     DeviceType,
-    Opcode, PhoneLoginRes,
+    Opcode,
+    PhoneLoginRes,
 )
 from .tcp import TcpTransport
 

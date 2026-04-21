@@ -6,11 +6,11 @@ from .schema import ApiError as ApiError
 from .schema import Attachment as Attachment
 from .schema import AttachmentContact as AttachmentContact
 from .schema import Audio as Audio
-from .schema import Call as Call
 from .schema import BasePayload as BasePayload
 from .schema import BaseReq as BaseReq
 from .schema import BaseRes as BaseRes
 from .schema import BaseSchema as BaseSchema
+from .schema import Call as Call
 from .schema import Chat as Chat
 from .schema import Contact as Contact
 from .schema import ContactName as ContactName

@@ -1,12 +1,11 @@
 """Tests for attachment type discrimination (AnyAttachment union parsing)."""
 
-import pytest
 from pydantic import TypeAdapter
 
 from minimax.schema.interface import AnyAttachment, Attachment
 from minimax.schema.models import (
-    Audio,
     AttachmentContact,
+    Audio,
     Call,
     Control,
     File,
@@ -14,7 +13,6 @@ from minimax.schema.models import (
     Sticker,
     Video,
 )
-
 
 adapter = TypeAdapter(AnyAttachment)
 

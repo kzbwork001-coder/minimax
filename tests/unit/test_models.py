@@ -1,16 +1,15 @@
-import pytest
 
 from minimax.schema.models import (
+    AttachmentContact,
     Audio,
     Call,
     Control,
+    Element,
     File,
+    Message,
     Photo,
     Sticker,
     Video,
-    AttachmentContact,
-    Element,
-    Message,
 )
 
 

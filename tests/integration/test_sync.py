@@ -1,6 +1,5 @@
 """Integration tests for the sync flow with mocked Max API responses."""
 
-import pytest
 
 from minimax.schema import Opcode
 from minimax.schema.models import Chat, Contact, ContactName, Profile
