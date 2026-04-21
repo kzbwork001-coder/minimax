@@ -1,13 +1,24 @@
 [project]
 name = "minimax"
 version = "0.1.0"
+description = "MAX wrapper"
+readme = "README.md"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "kzb" }]
+keywords = ["max", "messenger", "oneme", "asyncio", "client"]
+
 dependencies = [
     "pydantic",
     "websockets",
     "msgpack",
     "lz4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/kzbwork001-coder/minimax"
+Repository = "https://github.com/kzbwork001-coder/minimax"
+Issues = "https://github.com/kzbwork001-coder/minimax/issues"
 
 [build-system]
 requires = ["hatchling"]
