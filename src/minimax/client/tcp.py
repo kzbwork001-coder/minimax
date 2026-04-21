@@ -43,15 +43,15 @@ def _msgpack_default(obj: Any) -> Any:
 
 def pack(wrapper: Wrapper) -> bytes:
     """Serialize a Wrapper into a binary packet (header + msgpack payload)."""
-    ver_b = wrapper.ver.to_bytes(1)
-    cmd_b = wrapper.cmd.to_bytes(2)
+    ver_b = wrapper.ver.to_bytes(1, "big")
+    cmd_b = wrapper.cmd.to_bytes(2, "big")
     # seq field is 1 byte, so we wrap the monotonic counter to fit 0-255
-    seq_b = (wrapper.seq % 256).to_bytes(1)
-    opcode_b = wrapper.opcode.value.to_bytes(2)
+    seq_b = (wrapper.seq % 256).to_bytes(1, "big")
+    opcode_b = wrapper.opcode.value.to_bytes(2, "big")
     payload = wrapper.payload
     payload_dict = payload.model_dump(by_alias=True) if not isinstance(payload, EmptyPayload) else {}
     payload_bytes = msgpack.packb(payload_dict, default=_msgpack_default) or b""
-    payload_len_b = len(payload_bytes).to_bytes(4)
+    payload_len_b = len(payload_bytes).to_bytes(4, "big")
     log.debug("pack: seq=%d opcode=%s payload=%s", wrapper.seq % 256, wrapper.opcode.name, payload_dict)
     return ver_b + cmd_b + seq_b + opcode_b + payload_len_b + payload_bytes
 
@@ -64,11 +64,11 @@ def unpack(data: bytes) -> list[Wrapper]:
     """
     if len(data) < HEADER_SIZE:
         return []
-    ver = int.from_bytes(data[0:1])
-    cmd = int.from_bytes(data[1:3])
-    seq = int.from_bytes(data[3:4])
-    opcode = int.from_bytes(data[4:6])
-    packed_len = int.from_bytes(data[6:10])
+    ver = int.from_bytes(data[0:1], "big")
+    cmd = int.from_bytes(data[1:3], "big")
+    seq = int.from_bytes(data[3:4], "big")
+    opcode = int.from_bytes(data[4:6], "big")
+    packed_len = int.from_bytes(data[6:10], "big")
     # packed_len encodes two things: the top byte is the lz4 compression flag,
     # the lower 3 bytes are the actual payload length
     compression_flag = packed_len >> 24
@@ -176,7 +176,7 @@ class TcpTransport(Client):
                     log.info("Socket connection closed; exiting recv loop")
                     break
 
-                packed_len = int.from_bytes(header[6:10])
+                packed_len = int.from_bytes(header[6:10], "big")
                 payload_length = packed_len & 0x00FFFFFF
                 payload = bytearray()
                 remaining = payload_length
