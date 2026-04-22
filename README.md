@@ -10,6 +10,43 @@ pip install mini-max-wrapper
 
 You still `import minimax` in code — only the package name on PyPI differs.
 
+## Run from source (without pip)
+
+If you cloned the repo and want to run the examples without installing the
+package, just put `src/` on `PYTHONPATH` so Python can find `minimax`.
+
+First, install the runtime dependencies declared in `pyproject.toml`. Pick one:
+
+```bash
+# pip — read deps from pyproject.toml directly (no package install)
+pip install $(python -c "import tomllib; print(' '.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))")
+
+# or uv — same idea
+uv pip install $(python -c "import tomllib; print(' '.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))")
+```
+
+Then run an example with `src/` on the path:
+
+Linux / macOS:
+
+```bash
+PYTHONPATH=src python examples/socket_phone.py 79001234567
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:PYTHONPATH = "src"
+python examples\socket_phone.py 79001234567
+```
+
+Windows (cmd):
+
+```cmd
+set PYTHONPATH=src
+python examples\socket_phone.py 79001234567
+```
+
 ## Console examples
 
 If you just want to try the library from a terminal — no browser, no WebSocket
@@ -78,3 +115,30 @@ library from a browser through a WebSocket to your backend. Two flavors:
 
 This is the pattern any real app using this library should follow: the
 library lives on the server, the browser only talks to your backend.
+
+## Releasing
+
+Publishing to PyPI is automated by `.github/workflows/publish.yml`. It runs on
+any pushed tag matching `v*`, builds the sdist + wheel, and uploads via PyPI
+Trusted Publishing (OIDC — no API token stored in the repo).
+
+One-time setup on pypi.org → *Manage project* → *Publishing*:
+
+- PyPI project name: `mini-max-wrapper`
+- Owner: `kzbwork001-coder`
+- Repository name: `minimax`
+- Workflow name: `publish.yml`
+- Environment name: `pypi`
+
+Cutting a release:
+
+1. Bump `version` in `pyproject.toml` and commit.
+2. Tag and push:
+
+   ```bash
+   git tag v0.1.4
+   git push origin v0.1.4
+   ```
+
+3. Watch the **Publish to PyPI** workflow in the Actions tab. The workflow
+   refuses to publish if the tag doesn't match the version in `pyproject.toml`.
