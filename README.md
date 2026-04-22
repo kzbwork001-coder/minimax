@@ -10,43 +10,6 @@ pip install mini-max-wrapper
 
 You still `import minimax` in code — only the package name on PyPI differs.
 
-## Run from source (without pip)
-
-If you cloned the repo and want to run the examples without installing the
-package, just put `src/` on `PYTHONPATH` so Python can find `minimax`.
-
-First, install the runtime dependencies declared in `pyproject.toml`. Pick one:
-
-```bash
-# pip — read deps from pyproject.toml directly (no package install)
-pip install $(python -c "import tomllib; print(' '.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))")
-
-# or uv — same idea
-uv pip install $(python -c "import tomllib; print(' '.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))")
-```
-
-Then run an example with `src/` on the path:
-
-Linux / macOS:
-
-```bash
-PYTHONPATH=src python examples/socket_phone.py 79001234567
-```
-
-Windows (PowerShell):
-
-```powershell
-$env:PYTHONPATH = "src"
-python examples\socket_phone.py 79001234567
-```
-
-Windows (cmd):
-
-```cmd
-set PYTHONPATH=src
-python examples\socket_phone.py 79001234567
-```
-
 ## Console examples
 
 If you just want to try the library from a terminal — no browser, no WebSocket
