@@ -278,12 +278,32 @@ class Client(ABC):
         )
         return res.get_url()
 
-    async def fetch_messages(self, chat_id: int, history_from: datetime, history_to: datetime) -> list[Message]:
+    async def fetch_messages(
+        self,
+        chat_id: int,
+        history_from: datetime,
+        history_to: datetime,
+        limit: int | None = None,
+    ) -> list[Message]:
         """Fetch messages in a chat between history_from and history_to.
 
         The API only supports backward pagination from a message ID.
-        We start from history_to and page backwards in steps of 100 until we reach history_from.
+        We start from history_to and page backwards in steps of 100 until we
+        reach history_from.
+
+        Args:
+            chat_id: Chat to fetch from.
+            history_from: Inclusive lower time bound.
+            history_to: Inclusive upper time bound.
+            limit: Cap the number of messages returned. When set, pagination
+                stops as soon as ``limit`` in-range messages have been
+                collected — no further backward pages are fetched. Messages
+                are returned in API order (newest first), so the cap keeps
+                the ``limit`` most recent messages.
         """
+        if limit is not None and limit <= 0:
+            return []
+
         ts_from = int(history_from.timestamp()) * 1000
         ts_to = int(history_to.timestamp()) * 1000
         cursor = ts_to
@@ -302,9 +322,11 @@ class Client(ABC):
 
             for msg in res.messages:
                 if msg.time < ts_from:
-                    break
+                    return result
                 if msg.time <= ts_to:
                     result.append(msg)
+                    if limit is not None and len(result) >= limit:
+                        return result
 
             oldest = res.messages[-1]
             if oldest.time <= ts_from or len(res.messages) < 100:

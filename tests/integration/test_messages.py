@@ -79,3 +79,88 @@ class TestFetchMessages:
         assert opcode == Opcode.MESSAGES
         assert payload.chat_id == 555
         assert payload.backward == 100
+
+    async def test_limit_caps_result_size_within_single_page(self, mock_transport):
+        """When a single page already contains more than `limit` in-range messages,
+        the result must be truncated to exactly `limit` without fetching more pages."""
+        ts_from = int(datetime(2026, 1, 1).timestamp()) * 1000
+        ts_to = int(datetime(2026, 1, 2).timestamp()) * 1000
+        step = (ts_to - ts_from) // 10
+        page = [_make_msg(i, ts_to - i * step) for i in range(1, 10)]
+        mock_transport.set_response(Opcode.MESSAGES, MessagesRes(messages=page))
+
+        result = await mock_transport.fetch_messages(
+            chat_id=100,
+            history_from=datetime(2026, 1, 1),
+            history_to=datetime(2026, 1, 2),
+            limit=3,
+        )
+
+        assert len(result) == 3
+        assert [m.id for m in result] == [1, 2, 3]
+        # Only the first page was requested — pagination stopped early.
+        assert len([s for s in mock_transport.sent if s[0] == Opcode.MESSAGES]) == 1
+
+    async def test_limit_stops_pagination_across_pages(self, mock_transport):
+        """When `limit` is reached mid-second-page, no further backward pages are
+        fetched. This is the whole point of the parameter — bounding the API cost
+        when the caller only wants the N most recent messages."""
+        ts_from = int(datetime(2026, 1, 1).timestamp()) * 1000
+        ts_to = int(datetime(2026, 1, 2).timestamp()) * 1000
+        step = (ts_to - ts_from) // 250
+
+        # Two full pages of 100 so the loop would otherwise issue at least two
+        # MESSAGES requests. With limit=50 we expect exactly one.
+        pages = [
+            [_make_msg(i, ts_to - i * step) for i in range(1, 101)],
+            [_make_msg(i, ts_to - i * step) for i in range(101, 201)],
+        ]
+        call_count = {"n": 0}
+
+        def responder(_payload):
+            idx = min(call_count["n"], len(pages) - 1)
+            call_count["n"] += 1
+            return MessagesRes(messages=pages[idx])
+
+        mock_transport.set_response(Opcode.MESSAGES, responder)
+
+        result = await mock_transport.fetch_messages(
+            chat_id=100,
+            history_from=datetime(2026, 1, 1),
+            history_to=datetime(2026, 1, 2),
+            limit=50,
+        )
+
+        assert len(result) == 50
+        message_calls = [s for s in mock_transport.sent if s[0] == Opcode.MESSAGES]
+        assert len(message_calls) == 1
+
+    async def test_limit_none_is_unbounded(self, mock_transport):
+        """`limit=None` is the default and must preserve the pre-parameter behavior."""
+        ts_from = int(datetime(2026, 1, 1).timestamp()) * 1000
+        ts_to = int(datetime(2026, 1, 2).timestamp()) * 1000
+        page = [_make_msg(i, ts_to - i * 1000) for i in range(1, 11)]
+        mock_transport.set_response(Opcode.MESSAGES, MessagesRes(messages=page))
+
+        result = await mock_transport.fetch_messages(
+            chat_id=100,
+            history_from=datetime(2026, 1, 1),
+            history_to=datetime(2026, 1, 2),
+        )
+
+        assert len(result) == 10
+
+    async def test_limit_zero_returns_empty_without_request(self, mock_transport):
+        """`limit<=0` is a degenerate case — the caller wants zero messages, so
+        don't hit the API at all."""
+        mock_transport.set_response(Opcode.MESSAGES, MessagesRes(messages=[]))
+
+        result = await mock_transport.fetch_messages(
+            chat_id=100,
+            history_from=datetime(2026, 1, 1),
+            history_to=datetime(2026, 1, 2),
+            limit=0,
+        )
+
+        assert result == []
+        assert [s for s in mock_transport.sent if s[0] == Opcode.MESSAGES] == []
