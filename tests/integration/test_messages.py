@@ -51,9 +51,10 @@ class TestFetchMessages:
         ts_before = ts_from - 10000
         ts_in = ts_from + 1000
 
+        # Server returns each page oldest-first.
         mock_transport.set_response(
             Opcode.MESSAGES,
-            MessagesRes(messages=[_make_msg(2, ts_in), _make_msg(1, ts_before)]),
+            MessagesRes(messages=[_make_msg(1, ts_before), _make_msg(2, ts_in)]),
         )
 
         result = await mock_transport.fetch_messages(
@@ -86,7 +87,8 @@ class TestFetchMessages:
         ts_from = int(datetime(2026, 1, 1).timestamp()) * 1000
         ts_to = int(datetime(2026, 1, 2).timestamp()) * 1000
         step = (ts_to - ts_from) // 10
-        page = [_make_msg(i, ts_to - i * step) for i in range(1, 10)]
+        # Oldest-first: id=9 has the oldest time, id=1 the newest.
+        page = [_make_msg(i, ts_to - i * step) for i in range(9, 0, -1)]
         mock_transport.set_response(Opcode.MESSAGES, MessagesRes(messages=page))
 
         result = await mock_transport.fetch_messages(
@@ -109,11 +111,11 @@ class TestFetchMessages:
         ts_to = int(datetime(2026, 1, 2).timestamp()) * 1000
         step = (ts_to - ts_from) // 250
 
-        # Two full pages of 100 so the loop would otherwise issue at least two
-        # MESSAGES requests. With limit=50 we expect exactly one.
+        # Two full pages of 100, each oldest-first as the server returns them.
+        # With limit=50 we expect exactly one MESSAGES request.
         pages = [
-            [_make_msg(i, ts_to - i * step) for i in range(1, 101)],
-            [_make_msg(i, ts_to - i * step) for i in range(101, 201)],
+            [_make_msg(i, ts_to - i * step) for i in range(100, 0, -1)],
+            [_make_msg(i, ts_to - i * step) for i in range(200, 100, -1)],
         ]
         call_count = {"n": 0}
 
@@ -139,7 +141,8 @@ class TestFetchMessages:
         """`limit=None` is the default and must preserve the pre-parameter behavior."""
         ts_from = int(datetime(2026, 1, 1).timestamp()) * 1000
         ts_to = int(datetime(2026, 1, 2).timestamp()) * 1000
-        page = [_make_msg(i, ts_to - i * 1000) for i in range(1, 11)]
+        # Oldest-first as the server returns them.
+        page = [_make_msg(i, ts_to - i * 1000) for i in range(10, 0, -1)]
         mock_transport.set_response(Opcode.MESSAGES, MessagesRes(messages=page))
 
         result = await mock_transport.fetch_messages(

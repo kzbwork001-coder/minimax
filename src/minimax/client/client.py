@@ -287,9 +287,9 @@ class Client(ABC):
     ) -> list[Message]:
         """Fetch messages in a chat between history_from and history_to.
 
-        The API only supports backward pagination from a message ID.
-        We start from history_to and page backwards in steps of 100 until we
-        reach history_from.
+        The API only supports backward pagination from a timestamp. We start
+        from history_to and page backwards in steps of 100 until we reach
+        history_from.
 
         Args:
             chat_id: Chat to fetch from.
@@ -298,8 +298,8 @@ class Client(ABC):
             limit: Cap the number of messages returned. When set, pagination
                 stops as soon as ``limit`` in-range messages have been
                 collected — no further backward pages are fetched. Messages
-                are returned in API order (newest first), so the cap keeps
-                the ``limit`` most recent messages.
+                are returned newest-first, so the cap keeps the ``limit``
+                most recent messages.
         """
         if limit is not None and limit <= 0:
             return []
@@ -320,7 +320,7 @@ class Client(ABC):
             if not res.messages:
                 break
 
-            for msg in res.messages:
+            for msg in reversed(res.messages):
                 if msg.time < ts_from:
                     return result
                 if msg.time <= ts_to:
@@ -328,10 +328,10 @@ class Client(ABC):
                     if limit is not None and len(result) >= limit:
                         return result
 
-            oldest = res.messages[-1]
+            oldest = res.messages[0]
             if oldest.time <= ts_from or len(res.messages) < 100:
                 break
 
-            cursor = int(oldest.id)
+            cursor = oldest.time
 
         return result
