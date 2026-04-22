@@ -74,10 +74,10 @@ class Link(BaseSchema):
 
 class Message(BaseSchema):
     id: int = Field(description="ID of the message")
-    sender: int = Field(description="Sender ID")
     text: str | None = Field(default=None, description="Text content of the message")
     time: int = Field(description="Timestamp of the message")
     type: str = Field(description="Type of the message")
+    sender: int | None = Field(description="Sender ID. Might be None for channel")
     options: int | None = Field(default=None, description="Message options")
     elements: list[Element] = Field(default_factory=list, description="Formatting elements")
     attaches: list[AnyAttachment] = Field(default_factory=list, description="Attachments")
