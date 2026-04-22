@@ -22,6 +22,7 @@ PRESENCE_SYNC: Final[int] = 0
 DRAFT_SYNC: Final[int] = 0
 SYNC_INTERACTIVE: Final[bool] = True
 PING_INTERVAL_SECONDS: Final[int] = 30
+REQUEST_TIMEOUT_SECONDS: Final[float] = 60.0
 
 # websocket
 WEBSOCKET_URI: Final[str] = "wss://ws-api.oneme.ru/websocket"

@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
-from ..constants import PING_INTERVAL_SECONDS
+from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS
 from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
 from ..schema import (
@@ -117,7 +117,16 @@ class Client(ABC):
 
     async def send_and_wait(self, opcode: Opcode, **kwargs: Any) -> Wrapper:
         future = await self._send(opcode, **kwargs)
-        wrapper = await future
+        try:
+            wrapper = await asyncio.wait_for(future, timeout=REQUEST_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            # Reap the seq so a late response from the server doesn't leak into
+            # _pending and confuse a future request that wraps to the same key.
+            for seq, fut in list(self._pending.items()):
+                if fut is future:
+                    self._pending.pop(seq, None)
+                    break
+            raise
         if isinstance(wrapper.payload, ErrorRes):
             raise ApiError(wrapper.payload)
         return wrapper

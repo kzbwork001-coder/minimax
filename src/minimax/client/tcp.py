@@ -25,6 +25,30 @@ from .client import Client
 
 log = logging.getLogger(__name__)
 
+# lz4.block.decompress requires an upper bound on the uncompressed size when the
+# source was not compressed with store_size=True. The MAX server doesn't store
+# the size, so we retry with progressively larger ceilings. Caps are powers of
+# two; 64MB is well above anything the server has been observed to send for a
+# single packet.
+_LZ4_DECOMPRESS_MAX_SIZES = (1 << 20, 1 << 23, 1 << 26)
+
+
+class DecompressError(Exception):
+    """Raised by unpack_items when an lz4 packet cannot be decompressed.
+
+    Carries the seq so the recv loop can fail the matching pending future
+    instead of silently dropping the response (which would leave the awaiting
+    caller hung forever).
+    """
+
+    def __init__(self, seq: int, opcode: int, payload_length: int):
+        super().__init__(
+            f"LZ4 decompression failed for seq={seq} opcode={opcode} "
+            f"payload_len={payload_length} (exceeded {_LZ4_DECOMPRESS_MAX_SIZES[-1]} bytes)"
+        )
+        self.seq = seq
+        self.opcode = opcode
+
 # Header layout (10 bytes total):
 #   [0:1]  ver     (1 byte)
 #   [1:3]  cmd     (2 bytes)
@@ -83,11 +107,16 @@ def unpack_items(data: bytes) -> list[dict]:
     raw_payload = None
     if payload_bytes:
         if compression_flag != 0:
-            try:
-                payload_bytes = lz4.block.decompress(payload_bytes, uncompressed_size=99999)
-            except lz4.block.LZ4BlockError:
-                log.warning("LZ4 decompression failed, skipping packet")
-                return []
+            decompressed: bytes | None = None
+            for max_size in _LZ4_DECOMPRESS_MAX_SIZES:
+                try:
+                    decompressed = lz4.block.decompress(payload_bytes, uncompressed_size=max_size)
+                    break
+                except lz4.block.LZ4BlockError:
+                    continue
+            if decompressed is None:
+                raise DecompressError(seq=seq, opcode=opcode, payload_length=payload_length)
+            payload_bytes = decompressed
         raw_payload = msgpack.unpackb(payload_bytes, raw=False, strict_map_key=False)
 
     log.debug(
@@ -198,7 +227,18 @@ class TcpTransport(Client):
 
                     raw_packet = header + payload
 
-                    for item in unpack_items(raw_packet):
+                    try:
+                        items = unpack_items(raw_packet)
+                    except DecompressError as e:
+                        log.error("%s", e)
+                        future = self._pending.pop(e.seq, None)
+                        if future and not future.done():
+                            future.set_exception(e)
+                        else:
+                            log.warning("seq=%d decompress failed but no pending future", e.seq)
+                        continue
+
+                    for item in items:
                         seq_key = item.get("seq")
                         try:
                             wrapper = Client.build_wrapper(item)

@@ -63,7 +63,7 @@ async def dump_account(client) -> None:
     history_to = datetime.now()
 
     for chat in client.chats:
-        if chat.type == ChatType.DIALOG:
+        if chat.type in (ChatType.DIALOG, ChatType.CHANNEL):
             logger.info("--- Fetching messages for chat %d ---", chat.id)
             messages = await client.fetch_messages(chat.id, history_from, history_to)
             dump_messages(messages)
