@@ -157,6 +157,21 @@ class Client(ABC):
             await asyncio.sleep(PING_INTERVAL_SECONDS)
             await self._send(Opcode.PING)
 
+    def _fail_pending_and_stop_ping(self, exc: BaseException) -> None:
+        """Cancel the ping task and fail every pending request future with ``exc``.
+
+        Called by transports from their recv-loop ``finally`` block so that, when the
+        recv loop terminates for any reason, awaiting callers get a concrete exception
+        instead of hanging forever against a half-dead connection whose ping task is
+        still alive.
+        """
+        if self._ping_task and not self._ping_task.done():
+            self._ping_task.cancel()
+        for seq, fut in list(self._pending.items()):
+            if not fut.done():
+                fut.set_exception(exc)
+        self._pending.clear()
+
     @abstractmethod
     async def _connect(self) -> None: ...
 

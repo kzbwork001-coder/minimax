@@ -8,9 +8,9 @@ from .interface import AnyAttachment, Attachment, BaseSchema
 
 
 class Control(Attachment):
-    event: str | None = Field(description="Event of the CONTROL attachment")
-    message: str | None = Field(description="Message of the CONTROL attachment")
-    short_message: str | None = Field(description="Short Message of the CONTROL attachment")
+    event: str | None = Field(default=None, description="Event of the CONTROL attachment")
+    message: str | None = Field(default=None, description="Message of the CONTROL attachment")
+    short_message: str | None = Field(default=None, description="Short Message of the CONTROL attachment")
 
 
 class Photo(Attachment):
@@ -77,7 +77,7 @@ class Message(BaseSchema):
     text: str | None = Field(default=None, description="Text content of the message")
     time: int = Field(description="Timestamp of the message")
     type: str = Field(description="Type of the message")
-    sender: int | None = Field(description="Sender ID. Might be None for channel")
+    sender: int | None = Field(default=None, description="Sender ID. Might be None for channel")
     options: int | None = Field(default=None, description="Message options")
     elements: list[Element] = Field(default_factory=list, description="Formatting elements")
     attaches: list[AnyAttachment] = Field(default_factory=list, description="Attachments")

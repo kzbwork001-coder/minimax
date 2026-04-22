@@ -56,8 +56,13 @@ def pack(wrapper: Wrapper) -> bytes:
     return ver_b + cmd_b + seq_b + opcode_b + payload_len_b + payload_bytes
 
 
-def unpack(data: bytes) -> list[Wrapper]:
-    """Deserialize a binary packet into a list of Wrappers.
+def unpack_items(data: bytes) -> list[dict]:
+    """Deserialize a binary packet into a list of raw header+payload dicts.
+
+    Pydantic validation is intentionally NOT performed here so the caller can
+    decide what to do per-item when validation fails (for example, fail the
+    corresponding pending request future for that ``seq`` rather than silently
+    dropping the response).
 
     Returns a list because the server may batch multiple items in a single
     packet by sending a list as the msgpack payload.
@@ -95,18 +100,11 @@ def unpack(data: bytes) -> list[Wrapper]:
     )
 
     header = {"ver": ver, "cmd": cmd, "seq": seq, "opcode": opcode}
-    items = (
+    return (
         [{**header, "payload": obj} for obj in raw_payload]
         if isinstance(raw_payload, list)
         else [{**header, "payload": raw_payload}]
     )
-
-    wrappers = []
-    for item in items:
-        w = Client.build_wrapper(item)
-        if w is not None:
-            wrappers.append(w)
-    return wrappers
 
 
 def _create_ssl_context() -> ssl.SSLContext:
@@ -169,58 +167,73 @@ class TcpTransport(Client):
         sock = self._socket
         loop = asyncio.get_running_loop()
 
-        while self._socket is not None:
-            try:
-                header = await loop.run_in_executor(None, lambda: self._get_socket_bytes(sock, HEADER_SIZE))
-                if not header or len(header) < HEADER_SIZE:
-                    log.info("Socket connection closed; exiting recv loop")
-                    break
-
-                packed_len = int.from_bytes(header[6:10], "big")
-                payload_length = packed_len & 0x00FFFFFF
-                payload = bytearray()
-                remaining = payload_length
-
-                # TCP is a stream protocol — a single recv() may return fewer bytes
-                # than requested. This inner loop collects chunks until the full
-                # payload (whose size we know from the header) has been received.
-                while remaining > 0:
-                    chunk_size = min(remaining, 8192)
-                    chunk = await loop.run_in_executor(None, lambda cs=chunk_size: self._get_socket_bytes(sock, cs))
-                    if not chunk:
-                        log.error("Connection closed while reading payload")
+        try:
+            while self._socket is not None:
+                try:
+                    header = await loop.run_in_executor(None, lambda: self._get_socket_bytes(sock, HEADER_SIZE))
+                    if not header or len(header) < HEADER_SIZE:
+                        log.info("Socket connection closed; exiting recv loop")
                         break
-                    payload.extend(chunk)
-                    remaining -= len(chunk)
 
-                if remaining > 0:
-                    log.error("Incomplete payload received; skipping packet")
-                    continue
+                    packed_len = int.from_bytes(header[6:10], "big")
+                    payload_length = packed_len & 0x00FFFFFF
+                    payload = bytearray()
+                    remaining = payload_length
 
-                raw_packet = header + payload
-                wrappers = unpack(raw_packet)
+                    # TCP is a stream protocol — a single recv() may return fewer bytes
+                    # than requested. This inner loop collects chunks until the full
+                    # payload (whose size we know from the header) has been received.
+                    while remaining > 0:
+                        chunk_size = min(remaining, 8192)
+                        chunk = await loop.run_in_executor(None, lambda cs=chunk_size: self._get_socket_bytes(sock, cs))
+                        if not chunk:
+                            log.error("Connection closed while reading payload")
+                            break
+                        payload.extend(chunk)
+                        remaining -= len(chunk)
 
-                for wrapper in wrappers:
-                    seq_key = wrapper.seq
-                    log.debug("recv: seq=%d opcode=%s payload=%s", seq_key, wrapper.opcode.name, wrapper.payload)
-                    future = self._pending.pop(seq_key, None)
-                    if future and not future.done():
-                        future.set_result(wrapper)
-                    else:
-                        log.debug("seq=%d has no pending future (opcode=%s)", seq_key, wrapper.opcode.name)
+                    if remaining > 0:
+                        log.error("Incomplete payload received; skipping packet")
+                        continue
 
-            except asyncio.CancelledError as e:
-                log.debug("Recv loop cancelled: %s", e)
-                raise
-            except ConnectionError as e:
-                log.error("Connection error in recv_loop: %s", e)
-                break
-            except OSError as e:
-                log.error("Socket OS error in recv_loop: %s", e)
-                break
-            except Exception as e:
-                log.exception("Unexpected error in recv_loop: %s; backing off briefly", e)
-                await asyncio.sleep(RECV_LOOP_BACKOFF_DELAY)
+                    raw_packet = header + payload
+
+                    for item in unpack_items(raw_packet):
+                        seq_key = item.get("seq")
+                        try:
+                            wrapper = Client.build_wrapper(item)
+                        except Exception as e:
+                            log.exception("Failed to build wrapper (seq=%s): %s", seq_key, e)
+                            future = self._pending.pop(seq_key, None) if seq_key is not None else None
+                            if future and not future.done():
+                                future.set_exception(e)
+                            continue
+                        if wrapper is None:
+                            continue
+                        log.debug("recv: seq=%d opcode=%s payload=%s", wrapper.seq, wrapper.opcode.name, wrapper.payload)
+                        future = self._pending.pop(wrapper.seq, None)
+                        if future and not future.done():
+                            future.set_result(wrapper)
+                        else:
+                            log.debug("seq=%d has no pending future (opcode=%s)", wrapper.seq, wrapper.opcode.name)
+
+                except asyncio.CancelledError as e:
+                    log.debug("Recv loop cancelled: %s", e)
+                    raise
+                except ConnectionError as e:
+                    log.error("Connection error in recv_loop: %s", e)
+                    break
+                except OSError as e:
+                    log.error("Socket OS error in recv_loop: %s", e)
+                    break
+                except Exception as e:
+                    log.exception("Unexpected error in recv_loop: %s; backing off briefly", e)
+                    await asyncio.sleep(RECV_LOOP_BACKOFF_DELAY)
+        finally:
+            # Recv loop terminated for any reason — fail pending futures and cancel
+            # the ping task so callers unhook cleanly instead of hanging against
+            # a half-dead connection whose ping task keeps firing.
+            self._fail_pending_and_stop_ping(ConnectionError("minimax recv loop terminated"))
 
     async def _send(self, opcode: Opcode, **kwargs: Any) -> asyncio.Future[Wrapper]:
         if self._socket is None:

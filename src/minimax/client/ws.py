@@ -45,17 +45,33 @@ class WsTransport(Client):
             log.error("Can't start receiving loop, client is disconnected")
             return
 
-        async for raw_msg in self._ws:
-            log.debug("recv: %s", raw_msg)
-            wrapper = Client.build_wrapper(json.loads(raw_msg))
-            if wrapper is None:
-                continue
-            future = self._pending.pop(wrapper.seq, None)
-            if future and not future.done():
-                log.debug("seq=%d resolved -> %s", wrapper.seq, wrapper.opcode.name)
-                future.set_result(wrapper)
-            else:
-                log.warning("seq=%d has no pending future, dropping", wrapper.seq)
+        try:
+            async for raw_msg in self._ws:
+                log.debug("recv: %s", raw_msg)
+                data: Any = None
+                try:
+                    data = json.loads(raw_msg)
+                    wrapper = Client.build_wrapper(data)
+                except Exception as e:
+                    seq = data.get("seq") if isinstance(data, dict) else None
+                    log.exception("Failed to parse incoming message (seq=%s): %s", seq, e)
+                    future = self._pending.pop(seq, None) if seq is not None else None
+                    if future and not future.done():
+                        future.set_exception(e)
+                    continue
+                if wrapper is None:
+                    continue
+                future = self._pending.pop(wrapper.seq, None)
+                if future and not future.done():
+                    log.debug("seq=%d resolved -> %s", wrapper.seq, wrapper.opcode.name)
+                    future.set_result(wrapper)
+                else:
+                    log.warning("seq=%d has no pending future, dropping", wrapper.seq)
+        finally:
+            # Recv loop is exiting for any reason (EOF, fatal error, cancellation):
+            # fail pending futures and cancel the ping task so callers unhook cleanly
+            # instead of hanging against a half-dead connection.
+            self._fail_pending_and_stop_ping(ConnectionError("minimax recv loop terminated"))
 
     async def _send(self, opcode: Opcode, **kwargs: Any) -> Future[Wrapper]:
         """Send a request to the server and return a future for the response."""
