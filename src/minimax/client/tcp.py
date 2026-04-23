@@ -153,6 +153,7 @@ class TcpTransport(Client):
         self._host = SOCKET_HOST
         self._port = SOCKET_PORT
         self._socket: socket.socket | None = None
+        self._send_lock: asyncio.Lock | None = None
 
     async def _connect(self) -> None:
         for attempt in range(1, CONNECT_MAX_ATTEMPTS + 1):
@@ -279,27 +280,33 @@ class TcpTransport(Client):
         if self._socket is None:
             raise ConnectionError("Socket not connected")
 
-        self._seq += 1
-        seq = self._seq
-        # seq field in the binary header is 1 byte (0-255), so we use seq % 256
-        # as the pending-future key to match requests with responses
-        seq_key = seq % 256
+        if self._send_lock is None:
+            self._send_lock = asyncio.Lock()
 
         req_type, _ = OPCODE_SCHEMA[opcode]
         payload_model = req_type(**kwargs)  # type: ignore[call-arg]
-        wrapper = Wrapper(opcode=opcode, seq=seq, payload=payload_model)
 
-        old_future = self._pending.pop(seq_key, None)
-        if old_future and not old_future.done():
-            log.warning("seq=%d already pending, cancelling old future", seq_key)
-            old_future.cancel()
+        async with self._send_lock:
+            self._seq += 1
+            seq = self._seq
+            # seq field in the binary header is 1 byte (0-255), so we use seq % 256
+            # as the pending-future key to match requests with responses
+            seq_key = seq % 256
 
-        future: asyncio.Future[Wrapper] = asyncio.get_running_loop().create_future()
-        self._pending[seq_key] = future
+            wrapper = Wrapper(opcode=opcode, seq=seq, payload=payload_model)
 
-        packet = pack(wrapper)
-        log.debug("send seq=%d %s (%d bytes)", seq_key, opcode.name, len(packet))
+            old_future = self._pending.pop(seq_key, None)
+            if old_future and not old_future.done():
+                log.warning("seq=%d already pending, cancelling old future", seq_key)
+                old_future.cancel()
 
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, lambda: self._socket.sendall(packet))  # type: ignore[call-arg]
+            future: asyncio.Future[Wrapper] = asyncio.get_running_loop().create_future()
+            self._pending[seq_key] = future
+
+            packet = pack(wrapper)
+            log.debug("send seq=%d %s (%d bytes)", seq_key, opcode.name, len(packet))
+
+            loop = asyncio.get_running_loop()
+            sock = self._socket
+            await loop.run_in_executor(None, lambda: sock.sendall(packet))
         return future

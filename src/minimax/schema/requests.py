@@ -84,17 +84,15 @@ class MessagesReq(BaseReq):
 class FileUrlReq(BaseReq):
     """Payload for the file download request."""
 
-    file_id: int = Field(description="ID of the file")
     chat_id: int = Field(description="ID of the chat")
-    message_id: str = Field(description="ID of the message")
+    message_id: int = Field(description="ID of the message")
+    file_id: int = Field(description="ID of the file")
 
 
 class VideoUrlReq(BaseReq):
     """Payload for the video download request."""
 
     video_id: int = Field(description="ID of the video")
-    chat_id: int = Field(description="ID of the chat")
-    message_id: str = Field(description="ID of the message")
     token: str = Field(description="Token of the video")
 
 

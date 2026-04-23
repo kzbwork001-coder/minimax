@@ -12,14 +12,14 @@ class TestFileUrl:
             FileUrlRes(url="https://example.com/file.zip", unsafe=False),
         )
 
-        url = await mock_transport.get_file_url(file_id=10, chat_id=100, message_id="msg1")
+        url = await mock_transport.get_file_url(file_id=10, chat_id=100, message_id=100)
 
         assert url == "https://example.com/file.zip"
         opcode, payload = mock_transport.sent[0]
         assert opcode == Opcode.FILE_URL
         assert payload.file_id == 10
         assert payload.chat_id == 100
-        assert payload.message_id == "msg1"
+        assert payload.message_id == 100
 
 
 class TestVideoUrl:
@@ -33,7 +33,7 @@ class TestVideoUrl:
             ),
         )
 
-        url = await mock_transport.get_video_url(video_id=5, chat_id=100, message_id="msg2", token="vtok")
+        url = await mock_transport.get_video_url(video_id=5, token="vtok")
 
         assert url == "https://example.com/720.mp4"
         opcode, payload = mock_transport.sent[0]
@@ -47,6 +47,6 @@ class TestVideoUrl:
             VideoUrlRes(EXTERNAL="https://example.com/external.mp4"),
         )
 
-        url = await mock_transport.get_video_url(video_id=5, chat_id=100, message_id="msg2", token="vtok")
+        url = await mock_transport.get_video_url(video_id=5, token="vtok")
 
         assert url == "https://example.com/external.mp4"

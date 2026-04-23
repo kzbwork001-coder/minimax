@@ -7,15 +7,15 @@ from minimax.schema.models import Audio, File, Photo, Sticker, Video
 logger = logging.getLogger("examples")
 
 
-def format_attachment(attach) -> str:
+def format_attachment(attach, video_url: str | None = None, file_url: str | None = None) -> str:
     if isinstance(attach, Photo):
         return f"[Photo {attach.photo_id} {attach.base_url}]"
     elif isinstance(attach, Video):
-        return f"[Video {attach.video_id} {attach.width}x{attach.height}]"
+        return f"[Video {attach.video_id} {attach.width}x{attach.height} {video_url or ''}]"
     elif isinstance(attach, Audio):
         return f"[Audio {attach.audio_id} {attach.duration}s]"
     elif isinstance(attach, File):
-        return f"[File {attach.file_id} {attach.name}]"
+        return f"[File {attach.file_id} {attach.name} {file_url or ''}]"
     elif isinstance(attach, Sticker):
         return f"[Sticker {attach.sticker_id}]"
     return f"[{attach.type}]"
@@ -39,7 +39,7 @@ def dump_chats(chats: list[Chat]) -> None:
         logger.info("  [%d] %s | last: %s", chat.id, chat.type.value, preview)
 
 
-def dump_messages(messages: list[Message]) -> None:
+async def dump_messages(client, chat_id: int, messages: list[Message]) -> None:
     logger.info("=== Messages (%d) ===", len(messages))
     for msg in messages:
         ts = datetime.fromtimestamp(msg.time / 1000).strftime("%Y-%m-%d %H:%M")
@@ -47,7 +47,15 @@ def dump_messages(messages: list[Message]) -> None:
         parts = [f"  [{ts}] sender={msg.sender}: {text}"]
 
         for attach in msg.attaches:
-            parts.append(f"    {format_attachment(attach)}")
+            video_url: str | None = None
+            file_url: str | None = None
+            if isinstance(attach, Video) and attach.token:
+                video_url = await client.get_video_url(
+                    attach.video_id, attach.token
+                )
+            elif isinstance(attach, File):
+                file_url = await client.get_file_url(attach.file_id, chat_id, msg.id)
+            parts.append(f"    {format_attachment(attach, video_url, file_url)}")
 
         if msg.link:
             parts.append(f"    -> linked: {msg.link.message.id}")
@@ -65,5 +73,6 @@ async def dump_account(client) -> None:
     for chat in client.chats:
         if chat.type in (ChatType.DIALOG, ChatType.CHANNEL):
             logger.info("--- Fetching messages for chat %d ---", chat.id)
-            messages = await client.fetch_messages(chat.id, history_from, history_to)
-            dump_messages(messages)
+            limit = 10 if chat.type == ChatType.CHANNEL else None
+            messages = await client.fetch_messages(chat.id, history_from, history_to, limit=limit)
+            await dump_messages(client, chat.id, messages)

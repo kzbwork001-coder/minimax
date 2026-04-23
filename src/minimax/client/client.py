@@ -271,18 +271,16 @@ class Client(ABC):
         res = await self.request(Opcode.SESSIONS_INFO)
         return res.sessions
 
-    async def get_file_url(self, file_id: int, chat_id: int, message_id: str) -> str:
+    async def get_file_url(self, file_id: int, chat_id: int, message_id: int) -> str:
         """Get download URL for a file attachment."""
-        res = await self.request(Opcode.FILE_URL, file_id=file_id, chat_id=chat_id, message_id=message_id)
+        res = await self.request(Opcode.FILE_URL, chat_id=chat_id, file_id=file_id, message_id=message_id)
         return res.url
 
-    async def get_video_url(self, video_id: int, chat_id: int, message_id: str, token: str) -> str:
+    async def get_video_url(self, video_id: int, token: str) -> str:
         """Get the highest resolution download URL for a video attachment."""
         res = await self.request(
             Opcode.VIDEO_URL,
             video_id=video_id,
-            chat_id=chat_id,
-            message_id=message_id,
             token=token,
         )
         return res.get_url()

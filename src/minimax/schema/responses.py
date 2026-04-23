@@ -110,8 +110,8 @@ class MessagesRes(BaseRes):
 class FileUrlRes(BaseRes):
     """Payload for the file download response."""
 
-    unsafe: bool = Field(default=False, description="Whether the file is unsafe")
     url: str = Field(description="URL of the file")
+    unsafe: bool = Field(default=False, description="Whether the file is unsafe")
 
 
 class VideoUrlRes(BaseRes):
