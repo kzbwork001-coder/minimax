@@ -38,8 +38,12 @@ class Video(Attachment):
 
 
 class AttachmentContact(Attachment):
-    contact_id: int = Field(description="Contact ID")
+    contact_id: int | None = Field(default=None, description="Contact ID (absent for non-MAX contacts shared as vCard)")
     first_name: str | None = Field(default=None, description="First name of the contact")
+    last_name: str | None = Field(default=None, description="Last name of the contact")
+    name: str | None = Field(default=None, description="Display name of the contact")
+    phone: str | None = Field(default=None, description="Phone number of the contact")
+    vcf_body: str | None = Field(default=None, description="Raw vCard body of the contact")
     photo_url: str | None = Field(default=None, description="Photo URL of the contact")
 
 
