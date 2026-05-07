@@ -7,7 +7,13 @@ from typing import Any
 import websockets
 from websockets.asyncio.client import ClientConnection
 
-from ..constants import CONNECT_MAX_ATTEMPTS, CONNECT_RETRY_DELAY, USER_AGENT, WEBSOCKET_ORIGIN, WEBSOCKET_URI
+from ..constants import (
+    CONNECT_MAX_ATTEMPTS,
+    CONNECT_RETRY_DELAY,
+    WEBSOCKET_OPEN_TIMEOUT_SECONDS,
+    WEBSOCKET_ORIGIN,
+    WEBSOCKET_URI,
+)
 from ..schema import OPCODE_SCHEMA, Opcode, Wrapper
 from .client import Client
 
@@ -26,7 +32,7 @@ class WsTransport(Client):
             try:
                 log.info("Connecting to %s (attempt %d/%d)", WEBSOCKET_URI, attempt, CONNECT_MAX_ATTEMPTS)
                 self._ws = await websockets.connect(
-                    uri=WEBSOCKET_URI, origin=WEBSOCKET_ORIGIN, user_agent_header=USER_AGENT, ping_interval=None
+                    uri=WEBSOCKET_URI, origin=WEBSOCKET_ORIGIN, user_agent_header=self.user_agent, ping_interval=None, open_timeout=WEBSOCKET_OPEN_TIMEOUT_SECONDS
                 )
                 return
             except TimeoutError as e:

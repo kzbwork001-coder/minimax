@@ -146,24 +146,26 @@ def _create_ssl_context() -> ssl.SSLContext:
 
 
 class TcpTransport(Client):
-    """TCP socket transport layer. Handles connection, send/recv over a binary protocol."""
+    """TCP socket transport using asyncio streams. Handles TLS, send/recv over a binary protocol."""
 
     def __init__(self, phone: int | None, token: str | None = None):
         super().__init__(phone, token)
         self._host = SOCKET_HOST
         self._port = SOCKET_PORT
-        self._socket: socket.socket | None = None
-        self._send_lock: asyncio.Lock | None = None
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
 
     async def _connect(self) -> None:
+        ssl_ctx = _create_ssl_context()
         for attempt in range(1, CONNECT_MAX_ATTEMPTS + 1):
             try:
                 log.info("Connecting to %s:%s via TCP socket (attempt %d/%d)", self._host, self._port, attempt, CONNECT_MAX_ATTEMPTS)
-                loop = asyncio.get_running_loop()
-                ssl_ctx = _create_ssl_context()
-                raw_sock = await loop.run_in_executor(None, lambda: socket.create_connection((self._host, self._port)))
-                self._socket = ssl_ctx.wrap_socket(raw_sock, server_hostname=self._host)
-                self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)  # type: ignore[call-arg]
+                self._reader, self._writer = await asyncio.open_connection(
+                    self._host, self._port, ssl=ssl_ctx, server_hostname=self._host
+                )
+                sock = self._writer.get_extra_info("socket")
+                if sock is not None:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                 return
             except TimeoutError as e:
                 log.warning("TCP connection attempt %d/%d timed out: %s", attempt, CONNECT_MAX_ATTEMPTS, e)
@@ -172,60 +174,29 @@ class TcpTransport(Client):
         raise TimeoutError(f"Failed to connect to {self._host}:{self._port} after {CONNECT_MAX_ATTEMPTS} attempts")
 
     async def _disconnect(self) -> None:
-        if self._socket:
+        writer = self._writer
+        self._reader = None
+        self._writer = None
+        if writer is not None:
             try:
-                self._socket.close()
+                writer.close()
+                await writer.wait_closed()
             except Exception:
-                log.debug("Error closing socket", exc_info=True)
-            self._socket = None
-
-    @staticmethod
-    def _get_socket_bytes(sock: socket.socket, n: int) -> bytes:
-        buf = bytearray()
-        while len(buf) < n:
-            chunk = sock.recv(n - len(buf))
-            if not chunk:
-                return bytes(buf)
-            buf.extend(chunk)
-        return bytes(buf)
+                log.debug("Error closing writer", exc_info=True)
 
     async def _recv_loop(self) -> None:
-        if self._socket is None:
-            log.warning("Recv loop started without socket")
+        if self._reader is None:
+            log.warning("Recv loop started without reader")
             return
 
-        sock = self._socket
-        loop = asyncio.get_running_loop()
-
+        reader = self._reader
         try:
-            while self._socket is not None:
+            while self._reader is not None:
                 try:
-                    header = await loop.run_in_executor(None, lambda: self._get_socket_bytes(sock, HEADER_SIZE))
-                    if not header or len(header) < HEADER_SIZE:
-                        log.info("Socket connection closed; exiting recv loop")
-                        break
-
+                    header = await reader.readexactly(HEADER_SIZE)
                     packed_len = int.from_bytes(header[6:10], "big")
                     payload_length = packed_len & 0x00FFFFFF
-                    payload = bytearray()
-                    remaining = payload_length
-
-                    # TCP is a stream protocol — a single recv() may return fewer bytes
-                    # than requested. This inner loop collects chunks until the full
-                    # payload (whose size we know from the header) has been received.
-                    while remaining > 0:
-                        chunk_size = min(remaining, 8192)
-                        chunk = await loop.run_in_executor(None, lambda cs=chunk_size: self._get_socket_bytes(sock, cs))
-                        if not chunk:
-                            log.error("Connection closed while reading payload")
-                            break
-                        payload.extend(chunk)
-                        remaining -= len(chunk)
-
-                    if remaining > 0:
-                        log.error("Incomplete payload received; skipping packet")
-                        continue
-
+                    payload = await reader.readexactly(payload_length) if payload_length else b""
                     raw_packet = header + payload
 
                     try:
@@ -258,8 +229,11 @@ class TcpTransport(Client):
                         else:
                             log.debug("seq=%d has no pending future (opcode=%s)", wrapper.seq, wrapper.opcode.name)
 
-                except asyncio.CancelledError as e:
-                    log.debug("Recv loop cancelled: %s", e)
+                except asyncio.IncompleteReadError as e:
+                    log.info("Socket connection closed; exiting recv loop (read %d/%d bytes)", len(e.partial), e.expected)
+                    break
+                except asyncio.CancelledError:
+                    log.debug("Recv loop cancelled")
                     raise
                 except ConnectionError as e:
                     log.error("Connection error in recv_loop: %s", e)
@@ -271,42 +245,30 @@ class TcpTransport(Client):
                     log.exception("Unexpected error in recv_loop: %s; backing off briefly", e)
                     await asyncio.sleep(RECV_LOOP_BACKOFF_DELAY)
         finally:
-            # Recv loop terminated for any reason — fail pending futures and cancel
-            # the ping task so callers unhook cleanly instead of hanging against
-            # a half-dead connection whose ping task keeps firing.
             self._fail_pending_and_stop_ping(ConnectionError("minimax recv loop terminated"))
 
     async def _send(self, opcode: Opcode, **kwargs: Any) -> asyncio.Future[Wrapper]:
-        if self._socket is None:
+        if self._writer is None:
             raise ConnectionError("Socket not connected")
-
-        if self._send_lock is None:
-            self._send_lock = asyncio.Lock()
 
         req_type, _ = OPCODE_SCHEMA[opcode]
         payload_model = req_type(**kwargs)  # type: ignore[call-arg]
+        self._seq += 1
+        seq = self._seq
+        seq_key = seq % 256
 
-        async with self._send_lock:
-            self._seq += 1
-            seq = self._seq
-            # seq field in the binary header is 1 byte (0-255), so we use seq % 256
-            # as the pending-future key to match requests with responses
-            seq_key = seq % 256
+        wrapper = Wrapper(opcode=opcode, seq=seq, payload=payload_model)
 
-            wrapper = Wrapper(opcode=opcode, seq=seq, payload=payload_model)
+        old_future = self._pending.pop(seq_key, None)
+        if old_future and not old_future.done():
+            log.warning("seq=%d already pending, cancelling old future", seq_key)
+            old_future.cancel()
 
-            old_future = self._pending.pop(seq_key, None)
-            if old_future and not old_future.done():
-                log.warning("seq=%d already pending, cancelling old future", seq_key)
-                old_future.cancel()
+        future: asyncio.Future[Wrapper] = asyncio.get_running_loop().create_future()
+        self._pending[seq_key] = future
 
-            future: asyncio.Future[Wrapper] = asyncio.get_running_loop().create_future()
-            self._pending[seq_key] = future
-
-            packet = pack(wrapper)
-            log.debug("send seq=%d %s (%d bytes)", seq_key, opcode.name, len(packet))
-
-            loop = asyncio.get_running_loop()
-            sock = self._socket
-            await loop.run_in_executor(None, lambda: sock.sendall(packet))
+        packet = pack(wrapper)
+        log.debug("send seq=%d %s (%d bytes)", seq_key, opcode.name, len(packet))
+        self._writer.write(packet)
+        await self._writer.drain()
         return future
