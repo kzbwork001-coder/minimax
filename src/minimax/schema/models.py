@@ -2,9 +2,11 @@ from uuid import UUID
 
 from pydantic import Field
 
-from ..constants import APP_VERSION, DEVICE_LOCALE, DEVICE_NAME, LOCALE, OS_VERSION, SCREEN, TIMEZONE, USER_AGENT
+
 from .enums import ChatType, ContactNameType, DeviceType, LinkType
 from .interface import AnyAttachment, Attachment, BaseSchema
+from ..constants import DEFAULT_LOCALE, DEFAULT_DEVICE_LOCALE, DEFAULT_OS_VERSION, DEFAULT_DEVICE_NAME, \
+    APP_VERSION, DEFAULT_SCREEN, DEFAULT_TIMEZONE
 
 
 class Control(Attachment):
@@ -121,14 +123,15 @@ class UserSession(BaseSchema):
 
 class UserAgent(BaseSchema):
     device_type: DeviceType = Field(description="Type of the device")
+    header_user_agent: str = Field(description="User agent of the device")
+
+    locale: str = Field(default=DEFAULT_LOCALE, description="Locale of the device")
+    device_locale: str = Field(default=DEFAULT_DEVICE_LOCALE, description="Locale of the device,")
+    os_version: str = Field(default=DEFAULT_OS_VERSION, description="Version of the OS")
+    device_name: str = Field(default=DEFAULT_DEVICE_NAME, description="Name of the device")
     app_version: str = Field(default=APP_VERSION, description="Version of the app")
-    device_locale: str = Field(default=DEVICE_LOCALE, description="Locale of the device,")
-    device_name: str = Field(default=DEVICE_NAME, description="Name of the device")
-    header_user_agent: str = Field(default=USER_AGENT, description="User agent of the device")
-    locale: str = Field(default=LOCALE, description="Locale of the device")
-    os_version: str = Field(default=OS_VERSION, description="Version of the OS")
-    screen: str = Field(default=SCREEN, description="Screen of the device")
-    timezone: str = Field(default=TIMEZONE, description="Timezone of the device")
+    screen: str = Field(default=DEFAULT_SCREEN, description="Screen of the device")
+    timezone: str = Field(default=DEFAULT_TIMEZONE, description="Timezone of the device")
 
 
 class ContactName(BaseSchema):

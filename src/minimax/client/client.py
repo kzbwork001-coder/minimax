@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
-from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS
+from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS, DEFAULT_USER_AGENT
 from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
 from ..schema import (
@@ -43,6 +43,7 @@ class Client(ABC):
     def __init__(self, phone: int | None, token: str | None = None):
         self.phone = phone
         self.token = token
+        self.user_agent = DEFAULT_USER_AGENT
         self.me: Contact | None = None
         self.chats: list[Chat] = []
         self.contacts: list[Contact] = []
@@ -143,7 +144,7 @@ class Client(ABC):
         await self.request(
             Opcode.INIT,
             device_id=uuid.uuid4(),
-            user_agent=UserAgent(device_type=self.device_type),
+            user_agent=UserAgent(device_type=self.device_type, header_user_agent=self.user_agent),
         )
         self._ping_task = asyncio.create_task(self._ping_loop())
         self._ping_task.add_done_callback(self.events.on_task_done)

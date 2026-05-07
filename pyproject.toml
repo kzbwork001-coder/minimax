@@ -13,6 +13,7 @@ dependencies = [
     "websockets",
     "msgpack",
     "lz4",
+    "ua-generator>=2.0.19"
 ]
 
 [project.urls]
