@@ -1,5 +1,6 @@
 """Tests for connection retry logic in TcpTransport and WsTransport."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -47,6 +48,20 @@ class TestTcpConnectRetry:
             with pytest.raises(ConnectionRefusedError):
                 await transport._connect()
 
+    @pytest.mark.asyncio
+    async def test_asyncio_timeout_error_is_retried(self):
+        """On Python 3.10, asyncio.TimeoutError is a distinct class from the built-in
+        TimeoutError. asyncio.open_connection raises the asyncio variant on TLS handshake
+        timeout, so the retry clause must catch it."""
+        transport = TcpTransport(phone=71234567890)
+        with patch(
+            "minimax.client.tcp.asyncio.open_connection",
+            new_callable=AsyncMock,
+            side_effect=asyncio.TimeoutError("handshake timed out"),
+        ):
+            with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
+                await transport._connect()
+
 
 class TestWsConnectRetry:
     @pytest.mark.asyncio
@@ -81,4 +96,18 @@ class TestWsConnectRetry:
         transport = WsTransport(phone=71234567890)
         with patch("minimax.client.ws.websockets.connect", new_callable=AsyncMock, side_effect=OSError("network unreachable")):
             with pytest.raises(OSError):
+                await transport._connect()
+
+    @pytest.mark.asyncio
+    async def test_asyncio_timeout_error_is_retried(self):
+        """websockets.connect raises asyncio.TimeoutError on open_timeout. On Python 3.10
+        that's a distinct class from the built-in TimeoutError, so the retry clause must
+        catch the asyncio variant explicitly."""
+        transport = WsTransport(phone=71234567890)
+        with patch(
+            "minimax.client.ws.websockets.connect",
+            new_callable=AsyncMock,
+            side_effect=asyncio.TimeoutError("open timed out"),
+        ):
+            with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
                 await transport._connect()

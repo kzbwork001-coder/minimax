@@ -35,7 +35,7 @@ class WsTransport(Client):
                     uri=WEBSOCKET_URI, origin=WEBSOCKET_ORIGIN, user_agent_header=self.user_agent, ping_interval=None, open_timeout=WEBSOCKET_OPEN_TIMEOUT_SECONDS
                 )
                 return
-            except TimeoutError as e:
+            except (TimeoutError, asyncio.TimeoutError) as e:
                 log.warning("WebSocket connection attempt %d/%d timed out: %s", attempt, CONNECT_MAX_ATTEMPTS, e)
                 if attempt < CONNECT_MAX_ATTEMPTS:
                     await asyncio.sleep(CONNECT_RETRY_DELAY)
