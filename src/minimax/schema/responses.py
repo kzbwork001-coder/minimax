@@ -2,7 +2,7 @@ from typing import Annotated, Any
 
 from pydantic import Discriminator, Field, Tag, TypeAdapter
 
-from .interface import BaseRes
+from .interface import AccountNotFoundError, BaseRes
 from .models import Chat, Contact, Message, PasswordChallenge, Profile, QrStatus, TokenAttrs, UserSession
 
 
@@ -89,7 +89,12 @@ class LoginChallengeRes(BaseRes):
 
 def _login_res_discriminator(data: Any) -> str:
     if isinstance(data, dict):
-        return "challenge" if "passwordChallenge" in data else "success"
+        if "passwordChallenge" in data:
+            return "challenge"
+        token_attrs = data.get("tokenAttrs")
+        if isinstance(token_attrs, dict) and "LOGIN" not in token_attrs:
+            raise AccountNotFoundError()
+        return "success"
     return "challenge" if isinstance(data, LoginChallengeRes) else "success"
 
 

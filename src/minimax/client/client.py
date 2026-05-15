@@ -15,6 +15,7 @@ from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
 from ..schema import (
     OPCODE_SCHEMA,
+    AccountNotFoundError,
     ApiError,
     Chat,
     Contact,
@@ -128,6 +129,8 @@ class Client(ABC):
                     self._pending.pop(seq, None)
                     break
             raise
+        except AccountNotFoundError as e:
+            raise AccountNotFoundError(self.phone) from e
         if isinstance(wrapper.payload, ErrorRes):
             raise ApiError(wrapper.payload)
         return wrapper

@@ -83,6 +83,15 @@ class ApiError(Exception):
         super().__init__(f"{error_res.error}: {error_res.title} — {error_res.message}")
 
 
+class AccountNotFoundError(Exception):
+    """Raised when a login response indicates the phone has no MAX account
+    (server returned a REGISTER token instead of LOGIN + profile)."""
+
+    def __init__(self, phone: int | None = None):
+        self.phone = phone
+        super().__init__(f"Missing MAX account for phone {phone}")
+
+
 class Attachment(BaseSchema):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="allow")
     type: str = Field(alias="_type", description="Type of the attachment")

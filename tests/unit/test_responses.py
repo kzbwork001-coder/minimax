@@ -1,5 +1,8 @@
 """Tests for response model validation."""
 
+import pytest
+
+from minimax.schema.interface import AccountNotFoundError
 from minimax.schema.responses import (
     FileUrlRes,
     LoginChallengeRes,
@@ -61,3 +64,14 @@ class TestLoginRes:
         result = LoginRes.validate_python(data)
         assert isinstance(result, LoginChallengeRes)
         assert str(result.password_challenge.track_id) == "550e8400-e29b-41d4-a716-446655440000"
+
+    def test_register_only_response_raises_account_not_found(self):
+        """When VERIFY_CODE returns REGISTER token but no LOGIN/profile, the
+        phone has no MAX account — surface a typed error rather than letting
+        pydantic raise a generic ValidationError."""
+        data = {
+            "tokenAttrs": {"REGISTER": {"token": "register-token-xyz"}},
+            "presetAvatars": [],
+        }
+        with pytest.raises(AccountNotFoundError):
+            LoginRes.validate_python(data)

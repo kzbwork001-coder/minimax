@@ -8,6 +8,7 @@ from .enums import DeviceType as DeviceType
 from .enums import LinkType as LinkType
 from .enums import Opcode as Opcode
 from .events import Event as Event
+from .interface import AccountNotFoundError as AccountNotFoundError
 from .interface import AnyAttachment as AnyAttachment
 from .interface import ApiError as ApiError
 from .interface import Attachment as Attachment
