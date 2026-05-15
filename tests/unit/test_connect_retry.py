@@ -1,6 +1,7 @@
 """Tests for connection retry logic in TcpTransport and WsTransport."""
 
 import asyncio
+import socket
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -62,6 +63,33 @@ class TestTcpConnectRetry:
             with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
                 await transport._connect()
 
+    @pytest.mark.asyncio
+    async def test_dns_resolution_failure_is_retried(self):
+        """socket.gaierror (DNS lookup failure, e.g. EAI_AGAIN) is transient and should
+        be retried rather than propagated immediately."""
+        transport = TcpTransport(phone=71234567890)
+        with patch(
+            "minimax.client.tcp.asyncio.open_connection",
+            new_callable=AsyncMock,
+            side_effect=socket.gaierror(-3, "Temporary failure in name resolution"),
+        ):
+            with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
+                await transport._connect()
+
+    @pytest.mark.asyncio
+    async def test_connection_reset_is_retried(self):
+        """ConnectionResetError during the TLS handshake (peer sends RST mid-negotiation)
+        is typically transient — overloaded backend, brief proxy hiccup — and should
+        be retried, unlike its sibling ConnectionRefusedError which is permanent."""
+        transport = TcpTransport(phone=71234567890)
+        with patch(
+            "minimax.client.tcp.asyncio.open_connection",
+            new_callable=AsyncMock,
+            side_effect=ConnectionResetError(104, "Connection reset by peer"),
+        ):
+            with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
+                await transport._connect()
+
 
 class TestWsConnectRetry:
     @pytest.mark.asyncio
@@ -108,6 +136,33 @@ class TestWsConnectRetry:
             "minimax.client.ws.websockets.connect",
             new_callable=AsyncMock,
             side_effect=asyncio.TimeoutError("open timed out"),
+        ):
+            with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
+                await transport._connect()
+
+    @pytest.mark.asyncio
+    async def test_dns_resolution_failure_is_retried(self):
+        """socket.gaierror (DNS lookup failure, e.g. EAI_AGAIN) is transient and should
+        be retried rather than propagated immediately."""
+        transport = WsTransport(phone=71234567890)
+        with patch(
+            "minimax.client.ws.websockets.connect",
+            new_callable=AsyncMock,
+            side_effect=socket.gaierror(-3, "Temporary failure in name resolution"),
+        ):
+            with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
+                await transport._connect()
+
+    @pytest.mark.asyncio
+    async def test_connection_reset_is_retried(self):
+        """ConnectionResetError during the WebSocket handshake (peer sends RST mid-handshake)
+        is typically transient — overloaded backend, brief proxy hiccup — and should
+        be retried, unlike its sibling ConnectionRefusedError which is permanent."""
+        transport = WsTransport(phone=71234567890)
+        with patch(
+            "minimax.client.ws.websockets.connect",
+            new_callable=AsyncMock,
+            side_effect=ConnectionResetError(104, "Connection reset by peer"),
         ):
             with pytest.raises(TimeoutError, match=f"after {CONNECT_MAX_ATTEMPTS} attempts"):
                 await transport._connect()

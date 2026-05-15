@@ -167,8 +167,8 @@ class TcpTransport(Client):
                 if sock is not None:
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                 return
-            except (TimeoutError, asyncio.TimeoutError) as e:
-                log.warning("TCP connection attempt %d/%d timed out: %s", attempt, CONNECT_MAX_ATTEMPTS, e)
+            except (TimeoutError, asyncio.TimeoutError, socket.gaierror, ConnectionResetError) as e:
+                log.warning("TCP connection attempt %d/%d failed (%s): %s", attempt, CONNECT_MAX_ATTEMPTS, type(e).__name__, e)
                 if attempt < CONNECT_MAX_ATTEMPTS:
                     await asyncio.sleep(CONNECT_RETRY_DELAY)
         raise TimeoutError(f"Failed to connect to {self._host}:{self._port} after {CONNECT_MAX_ATTEMPTS} attempts")

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import socket
 from asyncio import Future, get_event_loop
 from typing import Any
 
@@ -35,8 +36,8 @@ class WsTransport(Client):
                     uri=WEBSOCKET_URI, origin=WEBSOCKET_ORIGIN, user_agent_header=self.user_agent, ping_interval=None, open_timeout=WEBSOCKET_OPEN_TIMEOUT_SECONDS
                 )
                 return
-            except (TimeoutError, asyncio.TimeoutError) as e:
-                log.warning("WebSocket connection attempt %d/%d timed out: %s", attempt, CONNECT_MAX_ATTEMPTS, e)
+            except (TimeoutError, asyncio.TimeoutError, socket.gaierror, ConnectionResetError) as e:
+                log.warning("WebSocket connection attempt %d/%d failed (%s): %s", attempt, CONNECT_MAX_ATTEMPTS, type(e).__name__, e)
                 if attempt < CONNECT_MAX_ATTEMPTS:
                     await asyncio.sleep(CONNECT_RETRY_DELAY)
         raise TimeoutError(f"Failed to connect to {WEBSOCKET_URI} after {CONNECT_MAX_ATTEMPTS} attempts")
