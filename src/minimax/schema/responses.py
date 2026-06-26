@@ -51,6 +51,12 @@ class ContactInfoRes(BaseRes):
 
     contacts: list[Contact] = Field(default_factory=list, description="Contacts after sync")
 
+class ContactInfoByPhoneRes(BaseRes):
+    """Payload for the contact info by phone request."""
+
+    contact: Contact = Field(description="Contact after search")
+
+
 
 class SessionInfoRes(BaseRes):
     """Payload for the session info response."""

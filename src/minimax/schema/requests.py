@@ -58,6 +58,10 @@ class ContactInfoReq(BaseReq):
 
     contact_ids: list[int] = Field(default_factory=list, description="IDs of the contacts")
 
+class ContactInfoByPhoneReq(BaseReq):
+    """Payload for the contact info by phone request."""
+
+    phone: str = Field(description="Phone number of the user")
 
 class PingReq(BaseReq):
     """Payload for the ping request."""

@@ -270,6 +270,14 @@ class Client(ABC):
 
         return [known[_id] for _id in contact_ids if _id in known]
 
+    async def get_contact_by_phone(self, phone: int | str) -> Contact:
+        """Look up a single contact by phone number via CONTACT_INFO_BY_PHONE."""
+        res = await self.request(Opcode.CONTACT_INFO_BY_PHONE, phone=str(phone))
+        contact = res.contact
+        if not any(c.id == contact.id for c in self.contacts):
+            self.contacts.append(contact)
+        return contact
+
     async def get_sessions_info(self) -> list[UserSession]:
         """Get user sessions."""
         res = await self.request(Opcode.SESSIONS_INFO)

@@ -7,8 +7,9 @@ class Opcode(int, Enum):
     PHONE_LOGIN = 17
     VERIFY_CODE = 18
     SYNC = 19
-    CHAT_INFO = 48
     CONTACT_INFO = 32
+    CONTACT_INFO_BY_PHONE = 46
+    CHAT_INFO = 48
     MESSAGES = 49
     FILE_URL = 88
     VIDEO_URL = 83

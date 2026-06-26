@@ -39,7 +39,7 @@ from .models import TokenAttrs as TokenAttrs
 from .models import UserAgent as UserAgent
 from .models import UserSession as UserSession
 from .models import Video as Video
-from .requests import ChatInfoReq as ChatInfoReq
+from .requests import ChatInfoReq as ChatInfoReq, ContactInfoByPhoneReq
 from .requests import ContactInfoReq as ContactInfoReq
 from .requests import FileUrlReq as FileUrlReq
 from .requests import MessagesReq as MessagesReq
@@ -51,7 +51,7 @@ from .requests import TwoFactorReq as TwoFactorReq
 from .requests import UserAgentReq as UserAgentReq
 from .requests import VerifyCodeReq as VerifyCodeReq
 from .requests import VideoUrlReq as VideoUrlReq
-from .responses import ChatInfoRes as ChatInfoRes
+from .responses import ChatInfoRes as ChatInfoRes, ContactInfoByPhoneRes
 from .responses import ContactInfoRes as ContactInfoRes
 from .responses import FileUrlRes as FileUrlRes
 from .responses import LoginRes as LoginRes
@@ -74,6 +74,7 @@ OPCODE_SCHEMA: dict[Opcode, tuple[type[BaseReq] | type[EmptyPayload], type[BaseR
     Opcode.TWO_FACTOR_CHALLENGE: (TwoFactorReq, LoginRes),
     Opcode.INIT: (UserAgentReq, UserAgentRes),
     Opcode.CHAT_INFO: (ChatInfoReq, ChatInfoRes),
+    Opcode.CONTACT_INFO_BY_PHONE: (ContactInfoByPhoneReq, ContactInfoByPhoneRes),
     Opcode.CONTACT_INFO: (ContactInfoReq, ContactInfoRes),
     Opcode.QR_LOGIN_INIT: (EmptyPayload, QrLoginInitRes),
     Opcode.QR_STATUS: (QrReq, QrStatusRes),
