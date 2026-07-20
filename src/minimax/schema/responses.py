@@ -128,7 +128,7 @@ class FileUrlRes(BaseRes):
 class VideoUrlRes(BaseRes):
     """Payload for the video download response."""
 
-    external: str = Field(alias="EXTERNAL", description="External URL of the video")
+    external: str | None = Field(alias="EXTERNAL", description="External URL of the video")
     cache: bool = Field(default=False, description="Whether the video is cached")
     mp4_16: str | None = Field(default=None, alias="MP4_16", description="URL of the 16p MP4 video")
     mp4_32: str | None = Field(default=None, alias="MP4_32", description="URL of the 32p MP4 video")
