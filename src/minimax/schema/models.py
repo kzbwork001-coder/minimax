@@ -76,6 +76,7 @@ class Element(BaseSchema):
 class Link(BaseSchema):
     type: LinkType = Field(description="Type of the link")
     message: "Message" = Field(description="Linked message")
+    chat_id: int | None = Field(default=None, alias="chatId", description="Chat ID for FORWARD message, for REPLY always null")
 
 
 class Message(BaseSchema):
