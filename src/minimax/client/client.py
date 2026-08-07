@@ -130,9 +130,12 @@ class Client(ABC):
                     break
             raise
         except AccountNotFoundError as e:
+            log.error("%s failed: missing MAX account for phone %s", opcode.name, self.phone)
             raise AccountNotFoundError(self.phone) from e
         if isinstance(wrapper.payload, ErrorRes):
-            raise ApiError(wrapper.payload)
+            res = wrapper.payload
+            log.error("%s failed: %s — %s - %s", opcode.name, res.error, res.title, res.message)
+            raise ApiError(res)
         return wrapper
 
     async def request(self, opcode: Opcode, **kwargs: Any):
