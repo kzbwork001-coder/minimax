@@ -38,18 +38,13 @@ DEVICE_NAMES: Final[list[str]] = [
     "Edge",
     "Safari",
     "Opera",
-    "Vivaldi",
     "Brave",
-    "Chromium",
     # os
     "Windows 10",
     "Windows 11",
     "macOS Big Sur",
     "macOS Monterey",
-    "macOS Ventura",
-    "Ubuntu 20.04",
     "Ubuntu 22.04",
-    "Fedora 35",
     "Fedora 36",
     "Debian 11",
 ]
@@ -69,31 +64,16 @@ OS_VERSIONS: Final[list[str]] = [
     "Windows 11",
     "macOS Big Sur",
     "macOS Monterey",
-    "macOS Ventura",
-    "Ubuntu 20.04",
     "Ubuntu 22.04",
-    "Fedora 35",
     "Fedora 36",
     "Debian 11",
 ]
 TIMEZONES: Final[list[str]] = [
     "Europe/Moscow",
     "Europe/Kaliningrad",
-    "Europe/Samara",
     "Asia/Yekaterinburg",
     "Asia/Omsk",
     "Asia/Krasnoyarsk",
-    "Asia/Irkutsk",
     "Asia/Yakutsk",
     "Asia/Vladivostok",
-    "Asia/Kamchatka",
 ]
-
-DEFAULT_LOCALE: Final[str] = "ru"
-DEFAULT_DEVICE_LOCALE: Final[str] = "ru"
-DEFAULT_DEVICE_NAME: Final[str] = choice(DEVICE_NAMES)
-DEFAULT_SCREEN: Final[str] = choice(SCREEN_SIZES)
-DEFAULT_OS_VERSION: Final[str] = choice(OS_VERSIONS)
-DEFAULT_USER_AGENT: Final[str] = ua_generator.generate().text
-DEFAULT_BUILD_NUMBER: Final[int] = 0x97CB
-DEFAULT_TIMEZONE: Final[str] = choice(TIMEZONES)

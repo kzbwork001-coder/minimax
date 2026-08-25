@@ -8,9 +8,10 @@ from datetime import datetime
 from types import TracebackType
 from typing import Any
 
+import ua_generator
 from pydantic import TypeAdapter
 
-from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, APP_VERSION, WEB_VERSION
+from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS, APP_VERSION, WEB_VERSION
 from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
 from ..schema import (
@@ -44,7 +45,7 @@ class Client(ABC):
     def __init__(self, phone: int | None, token: str | None = None):
         self.phone = phone
         self.token = token
-        self.user_agent = DEFAULT_USER_AGENT
+        self.user_agent = ua_generator.generate().text
         self.me: Contact | None = None
         self.chats: list[Chat] = []
         self.contacts: list[Contact] = []
