@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
-from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS, DEFAULT_USER_AGENT
+from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS, DEFAULT_USER_AGENT, APP_VERSION, WEB_VERSION
 from ..emitter import EventEmitter
 from ..listeners import register_default_listeners
 from ..schema import (
@@ -147,10 +147,11 @@ class Client(ABC):
         """Start recv and ping loops, send INIT."""
         self._recv_task = asyncio.create_task(self._recv_loop())
         self._recv_task.add_done_callback(self.events.on_task_done)
+        app_version = WEB_VERSION if self.device_type.WEB else APP_VERSION
         await self.request(
             Opcode.INIT,
             device_id=uuid.uuid4(),
-            user_agent=UserAgent(device_type=self.device_type, header_user_agent=self.user_agent),
+            user_agent=UserAgent(device_type=self.device_type, header_user_agent=self.user_agent, app_version=app_version),
         )
         self._ping_task = asyncio.create_task(self._ping_loop())
         self._ping_task.add_done_callback(self.events.on_task_done)

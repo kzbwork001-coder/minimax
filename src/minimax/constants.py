@@ -5,7 +5,8 @@ import ua_generator
 from websockets.typing import Origin
 
 # user agent
-APP_VERSION: Final[str] = "26.12.0"
+APP_VERSION: Final[str] = "26.17.1"
+WEB_VERSION: Final[str] = "26.8.4"
 CMD: Final[int] = 0
 VER: Final[int] = 11
 SYNC_CHAT_COUNT: Final[int] = 40
@@ -23,7 +24,7 @@ WEBSOCKET_ORIGIN: Final[Origin] = Origin("https://web.max.ru")
 WEBSOCKET_OPEN_TIMEOUT_SECONDS: Final[float] = 30.0
 
 # socket
-SOCKET_HOST: Final[str] = "api.oneme.ru"
+SOCKET_HOST: Final[str] = "api2.oneme.ru"
 SOCKET_PORT: Final[int] = 443
 RECV_LOOP_BACKOFF_DELAY: Final[float] = 0.5
 DEFAULT_TIMEOUT: Final[float] = 20.0

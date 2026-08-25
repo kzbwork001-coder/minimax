@@ -125,12 +125,12 @@ class UserSession(BaseSchema):
 class UserAgent(BaseSchema):
     device_type: DeviceType = Field(description="Type of the device")
     header_user_agent: str = Field(description="User agent of the device")
+    app_version: str = Field(description="Version of the app")
 
     locale: str = Field(default=DEFAULT_LOCALE, description="Locale of the device")
     device_locale: str = Field(default=DEFAULT_DEVICE_LOCALE, description="Locale of the device,")
     os_version: str = Field(default=DEFAULT_OS_VERSION, description="Version of the OS")
     device_name: str = Field(default=DEFAULT_DEVICE_NAME, description="Name of the device")
-    app_version: str = Field(default=APP_VERSION, description="Version of the app")
     screen: str = Field(default=DEFAULT_SCREEN, description="Screen of the device")
     timezone: str = Field(default=DEFAULT_TIMEZONE, description="Timezone of the device")
 
