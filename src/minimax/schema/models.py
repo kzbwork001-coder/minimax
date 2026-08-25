@@ -6,8 +6,7 @@ from pydantic import Field
 
 from .enums import ChatType, ContactNameType, DeviceType, LinkType
 from .interface import AnyAttachment, Attachment, BaseSchema
-from ..constants import DEFAULT_LOCALE, DEFAULT_DEVICE_LOCALE, DEFAULT_OS_VERSION, DEFAULT_DEVICE_NAME, \
-    APP_VERSION, DEFAULT_SCREEN, DEFAULT_TIMEZONE, DEVICE_NAMES, SCREEN_SIZES, OS_VERSIONS, TIMEZONES
+from ..constants import DEVICE_NAMES, SCREEN_SIZES, OS_VERSIONS, TIMEZONES
 
 
 class Control(Attachment):
