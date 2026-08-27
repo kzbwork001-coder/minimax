@@ -6,8 +6,6 @@ from pydantic import Field
 
 from .enums import ChatType, ContactNameType, DeviceType, LinkType
 from .interface import AnyAttachment, Attachment, BaseSchema
-from ..constants import DEVICE_NAMES, SCREEN_SIZES, OS_VERSIONS, TIMEZONES
-
 
 class Control(Attachment):
     event: str | None = Field(default=None, description="Event of the CONTROL attachment")
@@ -124,16 +122,17 @@ class UserSession(BaseSchema):
 
 class UserAgent(BaseSchema):
     device_type: DeviceType = Field(description="Type of the device")
-    header_user_agent: str = Field(description="User agent of the device")
     app_version: str = Field(description="Version of the app")
 
-    locale: str = Field(default="ru", description="Locale of the device")
-    device_locale: str = Field(default="ru", description="Locale of the device,")
-    os_version: str = Field(default=choice(OS_VERSIONS), description="Version of the OS")
-    device_name: str = Field(default=choice(DEVICE_NAMES), description="Name of the device")
-    screen: str = Field(default=choice(SCREEN_SIZES), description="Screen of the device")
-    timezone: str = Field(default=choice(TIMEZONES), description="Timezone of the device")
+    locale: str = Field(description="Locale of the device")
+    device_locale: str = Field(description="Locale of the device,")
+    os_version: str = Field(description="Version of the OS")
+    device_name: str = Field(description="Name of the device")
+    screen: str = Field(description="Screen of the device")
+    timezone: str = Field(description="Timezone of the device")
 
+class WebUserAgent(UserAgent):
+    header_user_agent: str = Field(description="User agent of the device")
 
 class ContactName(BaseSchema):
     name: str = Field(description="Full display name")

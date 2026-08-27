@@ -37,6 +37,7 @@ from .models import QrStatus as QrStatus
 from .models import Sticker as Sticker
 from .models import TokenAttrs as TokenAttrs
 from .models import UserAgent as UserAgent
+from .models import WebUserAgent as WebUserAgent
 from .models import UserSession as UserSession
 from .models import Video as Video
 from .requests import ChatInfoReq as ChatInfoReq, ContactInfoByPhoneReq

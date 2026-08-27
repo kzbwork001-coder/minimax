@@ -7,8 +7,6 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from types import TracebackType
 from typing import Any
-
-import ua_generator
 from pydantic import TypeAdapter
 
 from ..constants import PING_INTERVAL_SECONDS, REQUEST_TIMEOUT_SECONDS, APP_VERSION, WEB_VERSION
@@ -42,10 +40,10 @@ log = logging.getLogger(__name__)
 class Client(ABC):
     device_type: DeviceType
 
-    def __init__(self, phone: int | None, token: str | None = None):
+    def __init__(self, user_agent: UserAgent, phone: int | None, token: str | None = None):
         self.phone = phone
         self.token = token
-        self.user_agent = ua_generator.generate().text
+        self.user_agent = user_agent
         self.me: Contact | None = None
         self.chats: list[Chat] = []
         self.contacts: list[Contact] = []
@@ -148,11 +146,10 @@ class Client(ABC):
         """Start recv and ping loops, send INIT."""
         self._recv_task = asyncio.create_task(self._recv_loop())
         self._recv_task.add_done_callback(self.events.on_task_done)
-        app_version = WEB_VERSION if self.device_type.WEB else APP_VERSION
         await self.request(
             Opcode.INIT,
             device_id=uuid.uuid4(),
-            user_agent=UserAgent(device_type=self.device_type, header_user_agent=self.user_agent, app_version=app_version),
+            user_agent=self.user_agent,
         )
         self._ping_task = asyncio.create_task(self._ping_loop())
         self._ping_task.add_done_callback(self.events.on_task_done)
@@ -240,7 +237,7 @@ class Client(ABC):
     async def sync(self, token: str) -> None:
         """Authenticate with a token and sync chats/contacts."""
         log.info("Logging into %s", self.phone)
-        res = await self.request(Opcode.SYNC, token=token)
+        res = await self.sync_req(token)
         self.token = token
         self.me = res.profile.contact
         self.phone = res.profile.contact.phone
@@ -248,6 +245,9 @@ class Client(ABC):
         self.contacts = res.contacts
         log.info("Logged in, %d chats, %d contacts", len(res.chats), len(res.contacts))
         self.events.emit(Event.SUCCESSFUL_SYNC)
+
+    async def sync_req(self, token: str):
+        return await self.request(Opcode.SYNC, token=token)
 
     async def get_chats(self, chat_ids: list[int]) -> list[Chat]:
         """Get chats by IDs. Checks cache first, fetches missing ones via CHAT_INFO."""

@@ -46,6 +46,8 @@ class SyncReq(BaseReq):
     drafts_sync: int = Field(default=DRAFT_SYNC, description="Drafts to sync")
     token: str = Field(description="Token of the user")
 
+    # Only for socket
+    user_agent: UserAgent | None = Field(default=None, description="User agent of the user")
 
 class ChatInfoReq(BaseReq):
     """Payload for the chat info request."""

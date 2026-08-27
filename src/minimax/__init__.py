@@ -30,6 +30,7 @@ from .schema import QrStatus as QrStatus
 from .schema import Sticker as Sticker
 from .schema import TokenAttrs as TokenAttrs
 from .schema import UserAgent as UserAgent
+from .schema import WebUserAgent as WebUserAgent
 from .schema import UserSession as UserSession
 from .schema import Video as Video
 from .schema import Wrapper as Wrapper

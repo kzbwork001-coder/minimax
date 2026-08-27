@@ -8,12 +8,13 @@ from uuid import UUID
 import lz4.block
 import msgpack
 
+from .. import user_agent_helper
 from ..constants import (
     CONNECT_MAX_ATTEMPTS,
     CONNECT_RETRY_DELAY,
     RECV_LOOP_BACKOFF_DELAY,
     SOCKET_HOST,
-    SOCKET_PORT,
+    SOCKET_PORT
 )
 from ..schema import (
     OPCODE_SCHEMA,
@@ -149,7 +150,8 @@ class TcpTransport(Client):
     """TCP socket transport using asyncio streams. Handles TLS, send/recv over a binary protocol."""
 
     def __init__(self, phone: int | None, token: str | None = None):
-        super().__init__(phone, token)
+        self.user_agent = user_agent_helper.get_socket_user_agent()
+        super().__init__(self.user_agent, phone, token)
         self._host = SOCKET_HOST
         self._port = SOCKET_PORT
         self._reader: asyncio.StreamReader | None = None
@@ -246,6 +248,9 @@ class TcpTransport(Client):
                     await asyncio.sleep(RECV_LOOP_BACKOFF_DELAY)
         finally:
             self._fail_pending_and_stop_ping(ConnectionError("minimax recv loop terminated"))
+
+    async def sync_req(self, token: str):
+        return await self.request(Opcode.SYNC, token=token, user_agent=self.user_agent)
 
     async def _send(self, opcode: Opcode, **kwargs: Any) -> asyncio.Future[Wrapper]:
         if self._writer is None:

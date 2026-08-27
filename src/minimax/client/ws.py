@@ -8,14 +8,15 @@ from typing import Any
 import websockets
 from websockets.asyncio.client import ClientConnection
 
+from .. import user_agent_helper
 from ..constants import (
     CONNECT_MAX_ATTEMPTS,
     CONNECT_RETRY_DELAY,
     WEBSOCKET_OPEN_TIMEOUT_SECONDS,
     WEBSOCKET_ORIGIN,
-    WEBSOCKET_URI,
+    WEBSOCKET_URI, DEFAULT_WEB_HEADER_USER_AGENT, WEB_VERSION, WEB_SCREEN,
 )
-from ..schema import OPCODE_SCHEMA, Opcode, Wrapper
+from ..schema import OPCODE_SCHEMA, DeviceType, Opcode, UserAgent, Wrapper
 from .client import Client
 
 log = logging.getLogger(__name__)
@@ -25,7 +26,8 @@ class WsTransport(Client):
     """WebSocket transport layer. Handles connection, send/recv over JSON-WS."""
 
     def __init__(self, phone: int | None, token: str | None = None):
-        super().__init__(phone, token)
+        self.user_agent = user_agent_helper.get_web_user_agent()
+        super().__init__(self.user_agent, phone, token)
         self._ws: ClientConnection | None = None
 
     async def _connect(self) -> None:
@@ -33,7 +35,7 @@ class WsTransport(Client):
             try:
                 log.info("Connecting to %s (attempt %d/%d)", WEBSOCKET_URI, attempt, CONNECT_MAX_ATTEMPTS)
                 self._ws = await websockets.connect(
-                    uri=WEBSOCKET_URI, origin=WEBSOCKET_ORIGIN, user_agent_header=self.user_agent, ping_interval=None, open_timeout=WEBSOCKET_OPEN_TIMEOUT_SECONDS
+                    uri=WEBSOCKET_URI, origin=WEBSOCKET_ORIGIN, user_agent_header=self.user_agent.header_user_agent, ping_interval=None, open_timeout=WEBSOCKET_OPEN_TIMEOUT_SECONDS
                 )
                 return
             except (TimeoutError, asyncio.TimeoutError, socket.gaierror, ConnectionResetError) as e:
