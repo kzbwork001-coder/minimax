@@ -66,8 +66,8 @@ class Call(Attachment):
 
 
 class Element(BaseSchema):
-    type: str | None = Field(description="Type of the element")
-    length: int | None = Field(description="Length of the element")
+    type: str | None = Field(default=None, description="Type of the element")
+    length: int | None = Field(default=None, description="Length of the element")
     from_: int | None = Field(default=None, alias="from", description="Start position of the element")
 
 

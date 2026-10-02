@@ -3,6 +3,11 @@ from datetime import datetime
 
 from minimax import Chat, ChatType, Contact, Message
 from minimax.schema.models import Audio, File, Photo, Sticker, Video
+import ssl
+
+import aiohttp
+import asyncio
+import certifi
 
 logger = logging.getLogger("examples")
 
@@ -49,12 +54,15 @@ async def dump_messages(client, chat_id: int, messages: list[Message]) -> None:
         for attach in msg.attaches:
             video_url: str | None = None
             file_url: str | None = None
+            user_agent = getattr(client.user_agent, "header_user_agent", None)
             if isinstance(attach, Video) and attach.token:
                 video_url = await client.get_video_url(
                     attach.video_id, attach.token
                 )
+                await download_file_from_url(video_url,user_agent)
             elif isinstance(attach, File):
                 file_url = await client.get_file_url(attach.file_id, chat_id, msg.id)
+                await download_file_from_url(file_url,user_agent)
             parts.append(f"    {format_attachment(attach, video_url, file_url)}")
 
         if msg.link:
@@ -76,3 +84,37 @@ async def dump_account(client) -> None:
             limit = 10 if chat.type == ChatType.CHANNEL else None
             messages = await client.fetch_messages(chat.id, history_from, history_to, limit=limit)
             await dump_messages(client, chat.id, messages)
+
+
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+async def download_file_from_url(url: str, user_agent: str, max_retries: int = 3, timeout_seconds: int = 30):
+    logger.debug(f"Downloading file from URL: {url}")
+    timeout = aiohttp.ClientTimeout(total=timeout_seconds)
+    headers = {"User-Agent": user_agent} if user_agent else {}
+    for attempt in range(max_retries):
+        try:
+            async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                async with session.get(url, ssl=_SSL_CONTEXT) as resp:
+                    if resp.status == 200:
+                        file_data: bytes = await resp.read()
+                        logger.debug(
+                            f"Successfully downloaded file from {url} (attempt {attempt + 1}/{max_retries})"
+                        )
+                        return file_data
+                    else:
+                        raise Exception(
+                            f"Failed to download file, status code: {resp.status}"
+                        )
+
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            logger.warning(
+                f"Connection error downloading file from {url} (attempt {attempt + 1}/{max_retries}): {e}"
+            )
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2)
+                continue
+            else:
+                logger.error(
+                    f"Failed to download file from {url} after {max_retries} attempts"
+                )
+                raise e
