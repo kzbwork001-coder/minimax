@@ -16,6 +16,7 @@ from ..constants import (
     WEBSOCKET_ORIGIN,
     WEBSOCKET_URI, DEFAULT_WEB_HEADER_USER_AGENT, WEB_VERSION, WEB_SCREEN,
 )
+from ..log import Redacted
 from ..schema import OPCODE_SCHEMA, DeviceType, Opcode, UserAgent, Wrapper
 from .client import Client
 
@@ -56,7 +57,7 @@ class WsTransport(Client):
 
         try:
             async for raw_msg in self._ws:
-                log.debug("recv: %s", raw_msg)
+                log.debug("recv: %s", Redacted(raw_msg))
                 data: Any = None
                 try:
                     data = json.loads(raw_msg)
@@ -96,6 +97,6 @@ class WsTransport(Client):
         future: Future[Wrapper] = get_event_loop().create_future()
         self._pending[seq] = future
         raw = wrapper.to_json()
-        log.debug("send seq=%d %s: %s", seq, opcode.name, raw)
+        log.debug("send seq=%d %s: %s", seq, opcode.name, Redacted(raw))
         await self._ws.send(raw)
         return future

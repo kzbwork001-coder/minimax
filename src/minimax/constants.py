@@ -12,8 +12,8 @@ DEFAULT_WEB_HEADER_USER_AGENT = (
 WEB_SCREEN = "1080x1920 1.0x"
 
 # user agent
-APP_VERSION: Final[str] = "26.17.1"
-WEB_VERSION: Final[str] = "26.17.1"
+APP_VERSION: Final[str] = "26.25.0"
+WEB_VERSION: Final[str] = "26.10.1"
 CMD: Final[int] = 0
 VER: Final[int] = 11
 SYNC_CHAT_COUNT: Final[int] = 40

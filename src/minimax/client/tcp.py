@@ -16,6 +16,7 @@ from ..constants import (
     SOCKET_HOST,
     SOCKET_PORT
 )
+from ..log import Redacted
 from ..schema import (
     OPCODE_SCHEMA,
     EmptyPayload,
@@ -77,7 +78,7 @@ def pack(wrapper: Wrapper) -> bytes:
     payload_dict = payload.model_dump(by_alias=True) if not isinstance(payload, EmptyPayload) else {}
     payload_bytes = msgpack.packb(payload_dict, default=_msgpack_default) or b""
     payload_len_b = len(payload_bytes).to_bytes(4, "big")
-    log.debug("pack: seq=%d opcode=%s payload=%s", wrapper.seq % 256, wrapper.opcode.name, payload_dict)
+    log.debug("pack: seq=%d opcode=%s payload=%s", wrapper.seq % 256, wrapper.opcode.name, Redacted(payload_dict))
     return ver_b + cmd_b + seq_b + opcode_b + payload_len_b + payload_bytes
 
 
@@ -126,7 +127,7 @@ def unpack_items(data: bytes) -> list[dict]:
         opcode,
         compression_flag != 0,
         payload_length,
-        raw_payload,
+        Redacted(raw_payload),
     )
 
     header = {"ver": ver, "cmd": cmd, "seq": seq, "opcode": opcode}
@@ -224,7 +225,7 @@ class TcpTransport(Client):
                             continue
                         if wrapper is None:
                             continue
-                        log.debug("recv: seq=%d opcode=%s payload=%s", wrapper.seq, wrapper.opcode.name, wrapper.payload)
+                        log.debug("recv: seq=%d opcode=%s payload=%s", wrapper.seq, wrapper.opcode.name, Redacted(wrapper.payload))
                         future = self._pending.pop(wrapper.seq, None)
                         if future and not future.done():
                             future.set_result(wrapper)
